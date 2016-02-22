@@ -1,0 +1,5 @@
+rootProject.name = 'erlide_kernel'
+
+rootProject.projectDir.listFiles({ it.absolutePath.contains('erlide_kernel_') } as FileFilter).each { File subdir ->
+  include subdir.absolutePath.substring(rootProject.projectDir.absolutePath.length() + 1).replace(File.separator, ':')
+}

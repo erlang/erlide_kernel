@@ -1,0 +1,32 @@
+buildscript {
+  repositories {
+    mavenLocal()
+    jcenter()
+    maven {
+      url "https://plugins.gradle.org/m2/"
+    }
+  }
+}
+
+plugins {
+  id "com.github.jlouns.cpe" version "0.4.1"
+  id "de.undercouch.download" version "2.1.0"
+  id 'com.google.osdetector' version "1.4.0"
+}
+
+subprojects {
+
+    task build << {
+        println "hello ${project}"
+        
+        // detect OTP version to compile with
+
+        // check if kerl has the version
+        // if not, fail
+
+        // activate otp
+        // call rebar on project
+    }
+
+}
+

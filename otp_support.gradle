@@ -1,0 +1,103 @@
+import org.gradle.internal.os.OperatingSystem;
+
+boolean isLinux() {
+    OperatingSystem.current().isLinux()
+}
+boolean isWindows() {
+    OperatingSystem.current().isWindows()
+}
+boolean isMacOsX() {
+    OperatingSystem.current().isMacOsX()
+}
+
+// **********************************************************************
+
+println "OS: ${osdetector.os} ${osdetector.arch} ${osdetector.classifier} ${osdetector.release}"
+
+List otpRoots = [
+    "${System.env.HOME}/.kerl/installs",
+    "${rootDir}/.tools"
+]
+
+Map versions = [
+    "ubuntu": ["trusty", "precise", "vivid"],
+    "debian": ["wheezy"],
+    "osx": ["10.10"]
+]
+
+Map qualifiers = [
+    "windows": [qualifier: "windows", version: null, ext: "exe"],
+    "ubuntu": [qualifier: "ubuntu", version: "trusty", ext: "deb"],
+    "debian": [qualifier: "debian", version: "wheezy", ext: "deb"],
+    "osx": [qualifier: "osx", version: "10.10", ext: "dmg"]
+]
+
+String otpArchiveName(String version, String os, String osversion, String ext) {
+    String osver = osversion==null? os: "$os~$osversion"
+    return "esl-erlang_${version}-1~${osver}_amd64.${ext}"
+}
+
+setupTools()
+
+void setupTools() {
+    new File("${rootDir}/.tools").mkdir()
+
+    installOtp()
+}
+
+String osPath(String path) {
+    "${new File(path)}"
+}
+
+void downloadTool(String name, String url, boolean exec, String destDir) {
+    if(new File("${destDir}/${name}").exists()) {
+        println "Skip download $name"
+    } else {
+        download {
+            src url
+            dest "$destDir/$name"
+        }
+    }
+    if(exec) ant.chmod(dir: "$destDir", perm:"ug+x", includes:"$name")
+}
+
+import org.gradle.internal.os.OperatingSystem;
+
+void installOtp() {
+    String archiveName = downloadOtp()
+
+    String destDir = osPath("$rootDir/.tools/otp18")
+    println "INSTALL $archiveName in $destDir"
+    if(new File(destDir).exists()){
+        println "Skip, already installed."
+    } else {
+        if(isLinux()) {
+            //exec {
+            //    commandLine 'cmd', '/c', archiveName, '/S', "/D=$destDir"
+            //}
+        }else if(isWindows()) {
+            //exec {
+            //  commandLine 'cmd', '/c', archiveName, '/S', "/D=$destDir"
+            //}
+        } else {
+            println "we don't support ${OperatingSystem.current()}"
+        }
+    }
+}
+
+String downloadOtp() {
+    String archiveName = null
+    if(isLinux()) {
+            archiveName = null
+    }else if(isWindows()) {
+        archiveName  = otpArchiveName("18.2", "windows", null, "exe")
+    } else {
+        println "we don't support ${OperatingSystem.current()}"
+    }
+    if(archiveName != null) {
+        //downloadTool archiveName, "http://packages.erlang-solutions.com/site/esl/esl-erlang/FLAVOUR_1_general/$archiveName", false, "${rootDir}/.tools"
+    }
+    archiveName
+}
+
+

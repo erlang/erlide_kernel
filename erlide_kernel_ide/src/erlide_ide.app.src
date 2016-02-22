@@ -1,0 +1,9 @@
+{application, erlide_ide,
+  [
+   {vsn, "0.60.0"},
+   {registered,   []},
+   {applications, [kernel, stdlib, erlide_common]},
+   {env,          []},
+   {mod, {erlide_ide_app, []}}
+   ]}
+.

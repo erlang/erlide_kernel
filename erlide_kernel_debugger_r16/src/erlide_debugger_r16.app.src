@@ -1,0 +1,8 @@
+{application, erlide_debugger_r16,
+  [
+   {vsn, "0.60.0"},
+   {registered,   []},
+   {applications, [kernel, stdlib]},
+   {env,          []}
+   ]}
+.

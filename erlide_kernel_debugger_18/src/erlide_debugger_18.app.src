@@ -1,0 +1,8 @@
+{application, erlide_debugger_18,
+  [
+   {vsn, "18.*"},
+   {registered,   []},
+   {applications, [kernel, stdlib]},
+   {env,          []}
+   ]}
+.
