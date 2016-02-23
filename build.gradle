@@ -14,19 +14,156 @@ plugins {
   id 'com.google.osdetector' version "1.4.0"
 }
 
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.util.regex.Pattern
+import java.util.regex.Matcher
+
 subprojects {
 
-    task build << {
-        println "hello ${project}"
-        
-        // detect OTP version to compile with
+    ext {
+        otpDirs = [
+            "18": "${System.getProperty("user.home")}/erlide_tools/otp18",
+            "17": "${System.getProperty("user.home")}/erlide_tools/otp17",
+            "16": "${System.getProperty("user.home")}/erlide_tools/otp16",
+            "15": "${System.getProperty("user.home")}/erlide_tools/otp15"
+        ]
+    }
 
-        // check if kerl has the version
-        // if not, fail
+    task build(type: Exec) {
+        String otpVer = detect_otp(projectDir)
+        String otpHome = otpDirs[otpVer]
+        workingDir = projectDir
+        environment['ERL_LIBS'] = "${System.getProperty("user.home")}/erlide_tools:${environment['ERL_LIBS']}"
+        commandLine "${otpHome}/bin/escript", "${rootDir}/rebar", '-v', 'compile'
+    }
 
-        // activate otp
-        // call rebar on project
+    task test(type: Exec) {
+        String otpVer = detect_otp(projectDir)
+        String otpHome = otpDirs[otpVer]
+
+        workingDir = projectDir
+        environment['ERL_LIBS'] = "${System.getProperty("user.home")}/erlide_tools:${environment['ERL_LIBS']}"
+        commandLine "${otpHome}/bin/escript", "${rootDir}/rebar", '-v', 'skip_deps=true', 'eunit'
     }
 
 }
+
+task assemble(type: Zip) {
+    baseName 'erlide_kernel'
+    subprojects.each { subproject ->
+        dependsOn subproject.build
+        // TODO group by backend target?
+        into(subproject.name) {
+            from subproject.file('ebin')
+            exclude '.marker'
+        }
+    }
+}
+
+
+String detect_otp(File dir) {
+    byte[] encoded = Files.readAllBytes(Paths.get("${dir}/rebar.config"))
+    String text = new String(encoded, 'UTF-8')
+    Pattern p = Pattern.compile("require_otp_vsn, *\"R?([0-9]+).*\"")
+    Matcher m = p.matcher(text)
+    if(m.find())
+        return m.group(1)
+    return "15"
+}
+
+// **********************************************************************
+
+boolean isLinux() {
+    OperatingSystem.current().isLinux()
+}
+boolean isWindows() {
+    OperatingSystem.current().isWindows()
+}
+boolean isMacOsX() {
+    OperatingSystem.current().isMacOsX()
+}
+
+List otpRoots = [
+    "${System.env.HOME}/.kerl/installs",
+    "${rootDir}/.tools"
+]
+
+Map versions = [
+    "ubuntu": ["trusty", "precise", "vivid"],
+    "debian": ["wheezy"],
+    "osx": ["10.10"]
+]
+
+Map qualifiers = [
+    "windows": [qualifier: "windows", version: null, ext: "exe"],
+    "ubuntu": [qualifier: "ubuntu", version: "trusty", ext: "deb"],
+    "debian": [qualifier: "debian", version: "wheezy", ext: "deb"],
+    "osx": [qualifier: "osx", version: "10.10", ext: "dmg"]
+]
+
+String otpArchiveName(String version, String os, String osversion, String ext) {
+    String osver = osversion==null? os: "$os~$osversion"
+    return "esl-erlang_${version}-1~${osver}_amd64.${ext}"
+}
+
+void setupTools() {
+    new File("${rootDir}/.tools").mkdir()
+
+    installOtp()
+}
+
+String osPath(String path) {
+    "${new File(path)}"
+}
+
+void downloadTool(String name, String url, boolean exec, String destDir) {
+    if(new File("${destDir}/${name}").exists()) {
+        println "Skip download $name"
+    } else {
+        download {
+            src url
+            dest "$destDir/$name"
+        }
+    }
+    if(exec) ant.chmod(dir: "$destDir", perm:"ug+x", includes:"$name")
+}
+
+void installOtp() {
+    String archiveName = downloadOtp()
+
+    String destDir = osPath("$rootDir/.tools/otp18")
+    println "INSTALL $archiveName in $destDir"
+    if(new File(destDir).exists()){
+        println "Skip, already installed."
+    } else {
+        if(isLinux()) {
+            //exec {
+            //    commandLine 'cmd', '/c', archiveName, '/S', "/D=$destDir"
+            //}
+        }else if(isWindows()) {
+            //exec {
+            //  commandLine 'cmd', '/c', archiveName, '/S', "/D=$destDir"
+            //}
+        } else {
+            println "we don't support ${OperatingSystem.current()}"
+        }
+    }
+}
+
+String downloadOtp() {
+    String archiveName = null
+    if(isLinux()) {
+            archiveName = null
+    }else if(isWindows()) {
+        archiveName  = otpArchiveName("18.2", "windows", null, "exe")
+    } else {
+        println "we don't support ${OperatingSystem.current()}"
+    }
+    if(archiveName != null) {
+        //downloadTool archiveName, "http://packages.erlang-solutions.com/site/esl/esl-erlang/FLAVOUR_1_general/$archiveName", false, "${rootDir}/.tools"
+    }
+    archiveName
+}
+
 

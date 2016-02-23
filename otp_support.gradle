@@ -1,4 +1,7 @@
-import org.gradle.internal.os.OperatingSystem;
+// NOT USED
+// maybe later
+
+import org.gradle.internal.os.OperatingSystem
 
 boolean isLinux() {
     OperatingSystem.current().isLinux()
@@ -9,10 +12,6 @@ boolean isWindows() {
 boolean isMacOsX() {
     OperatingSystem.current().isMacOsX()
 }
-
-// **********************************************************************
-
-println "OS: ${osdetector.os} ${osdetector.arch} ${osdetector.classifier} ${osdetector.release}"
 
 List otpRoots = [
     "${System.env.HOME}/.kerl/installs",
@@ -37,8 +36,6 @@ String otpArchiveName(String version, String os, String osversion, String ext) {
     return "esl-erlang_${version}-1~${osver}_amd64.${ext}"
 }
 
-setupTools()
-
 void setupTools() {
     new File("${rootDir}/.tools").mkdir()
 
@@ -60,8 +57,6 @@ void downloadTool(String name, String url, boolean exec, String destDir) {
     }
     if(exec) ant.chmod(dir: "$destDir", perm:"ug+x", includes:"$name")
 }
-
-import org.gradle.internal.os.OperatingSystem;
 
 void installOtp() {
     String archiveName = downloadOtp()

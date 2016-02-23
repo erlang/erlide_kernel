@@ -3,7 +3,6 @@
 	<name>erlide_kernel_common</name>
 	<comment></comment>
 	<projects>
-		<project>releng.tools</project>
 	</projects>
 	<buildSpec>
 		<buildCommand>
