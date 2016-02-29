@@ -25,23 +25,29 @@ subprojects {
         otpDirs = [
             "18": "${System.getProperty("user.home")}/erlide_tools/otp18",
             "17": "${System.getProperty("user.home")}/erlide_tools/otp17",
-            "16": "${System.getProperty("user.home")}/erlide_tools/otp16",
-            "15": "${System.getProperty("user.home")}/erlide_tools/otp15"
+            "r16": "${System.getProperty("user.home")}/erlide_tools/otp16",
+            "r15": "${System.getProperty("user.home")}/erlide_tools/otp15"
         ]
+        context = detect_erlide_context(projectDir)
+        otp_version = detect_otp(projectDir)
+    }
+
+    task clean(type: Exec) {
+        String otpHome = otpDirs[otp_version]
+        workingDir = projectDir
+        environment['ERL_LIBS'] = "${System.getProperty("user.home")}/erlide_tools:${environment['ERL_LIBS']}"
+        commandLine "${otpHome}/bin/escript", "${rootDir}/rebar", '-v', 'clean'
     }
 
     task build(type: Exec) {
-        String otpVer = detect_otp(projectDir)
-        String otpHome = otpDirs[otpVer]
+        String otpHome = otpDirs[otp_version]
         workingDir = projectDir
         environment['ERL_LIBS'] = "${System.getProperty("user.home")}/erlide_tools:${environment['ERL_LIBS']}"
         commandLine "${otpHome}/bin/escript", "${rootDir}/rebar", '-v', 'compile'
     }
 
     task test(type: Exec) {
-        String otpVer = detect_otp(projectDir)
-        String otpHome = otpDirs[otpVer]
-
+        String otpHome = otpDirs[otp_version]
         workingDir = projectDir
         environment['ERL_LIBS'] = "${System.getProperty("user.home")}/erlide_tools:${environment['ERL_LIBS']}"
         commandLine "${otpHome}/bin/escript", "${rootDir}/rebar", '-v', 'skip_deps=true', 'eunit'
@@ -49,27 +55,79 @@ subprojects {
 
 }
 
-task assemble(type: Zip) {
+task assemble_base(type: Zip) {
     baseName 'erlide_kernel'
-    subprojects.each { subproject ->
+    subprojects.findAll { !it.name.contains('debugger') }.each { subproject ->
         dependsOn subproject.build
-        // TODO group by backend target?
-        into(subproject.name) {
+        into("${subproject.context}") {
             from subproject.file('ebin')
             exclude '.marker'
         }
     }
 }
 
+task assemble_debugger(type: Zip) {
+    baseName 'erlide_kernel_debugger'
+    subprojects.findAll { it.name.endsWith('debugger') }.each { subproject ->
+        dependsOn subproject.build
+        into("${subproject.context}") {
+            from subproject.file('ebin')
+            exclude '.marker'
+        }
+    }
+    subprojects.findAll { it.name.contains('debugger_') }.each { subproject ->
+        dependsOn subproject.build
+        into("${subproject.context}/${subproject.otp_version}") {
+            from subproject.file('ebin')
+            exclude '.marker'
+        }
+    }
+}
+
+task assemble {
+     dependsOn tasks.withType(Zip)
+}
 
 String detect_otp(File dir) {
     byte[] encoded = Files.readAllBytes(Paths.get("${dir}/rebar.config"))
     String text = new String(encoded, 'UTF-8')
-    Pattern p = Pattern.compile("require_otp_vsn, *\"R?([0-9]+).*\"")
+    Pattern p = Pattern.compile("require_otp_vsn, *\"(R?[0-9]+).*\"")
+    Matcher m = p.matcher(text)
+    if(m.find()) {
+        String r = m.group(1)
+        return r.toLowerCase()
+    }
+    return "r15"
+}
+
+String detect_erlide_context(File dir) {
+    File srcDir = new File(dir, 'src')
+    File appSrc = srcDir.listFiles().find { it.name.endsWith('.app.src') }
+    if(appSrc==null) return "error"
+
+    java.nio.file.Path path = Paths.get(appSrc.path)
+    byte[] encoded = Files.readAllBytes(path)
+    String text = new String(encoded, 'UTF-8')
+    Pattern p = Pattern.compile("\\{erlide_context, *([^\\}]+)\\}")
     Matcher m = p.matcher(text)
     if(m.find())
         return m.group(1)
-    return "15"
+    return "common"
+}
+
+String detect_version(File dir) {
+    File srcDir = new File(dir, 'src')
+    File appSrc = srcDir.listFiles().find { it.name.endsWith('.app.src') }
+    if(appSrc==null) return "error"
+
+    java.nio.file.Path path = Paths.get(appSrc.path)
+    byte[] encoded = Files.readAllBytes(path)
+    String text = new String(encoded, 'UTF-8')
+    Pattern p = Pattern.compile("\\{vsn, *([^\\}]+)\\}")
+    Matcher m = p.matcher(text)
+    if(m.find())
+        return m.group(1)
+    return "0.0.0"
 }
 
 // **********************************************************************
