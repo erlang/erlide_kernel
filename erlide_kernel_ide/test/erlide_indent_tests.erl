@@ -15,12 +15,18 @@
 
 -define(Test_indent(SIndent, S),
         ?_assertEqual(SIndent,
-                      erlide_indent:indent_lines(S, 0, length(S), 8, false, []))).
+                      erlide_indent:indent_lines(S, 0, length(S), 8, 8, false, []))).
 
 simple_function_test_() ->
     S = "a() ->\nb.\n",
     SIndent = "a() ->\n    b.\n",
     ?Test_indent(SIndent, S).
+
+simple_function1_test_() ->
+    S = "a() ->\nb.\n",
+    SIndent = "a() ->\n    b.\n",
+    ?_assertEqual(SIndent,
+                  erlide_indent:indent_lines(S, 0, length(S), 8, 8, false, [])).
 
 expressions_test_() ->
     S = "#r{a=a,\nb=b, [a,\nb],\n{a, b,\nc, fn(a, \nb)}},",
@@ -477,4 +483,4 @@ indent_map_arg_test_() ->
 %%
 
 %% test_indent(SIndent, S) ->
-%%     ?_assertEqual(SIndent, erlide_indent:indent_lines(S, 0, length(S), 8, false, [])).
+%%     ?_assertEqual(SIndent, erlide_indent:indent_lines(S, 0, length(S), 8, 8, false, [])).

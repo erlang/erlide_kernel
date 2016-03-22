@@ -11,14 +11,19 @@
 %% Exported Functions
 %%
 
--export([indent_line/6, indent_lines/6, template_indent_lines/5]).
+-export([
+         indent_line/7,
+         indent_lines/7,
+         template_indent_lines/6
+        ]).
 
-%-define(IO_FORMAT_DEBUG, 1).
-%-define(DEBUG, 1).
+%% -define(IO_FORMAT_DEBUG, 1).
+%% -define(DEBUG, 1).
 
 -include("erlide.hrl").
 -include("erlide_token.hrl").
 
+%% TODO change into multiples of IndentW
 default_indent_prefs() ->
     [{before_binary_op, 4},
      {after_binary_op, 4},
@@ -40,10 +45,10 @@ default_indent_prefs() ->
 %%
 %% API Functions
 %%
-indent_line(St, OldLine, CommandText, Tablength, UseTabs, Prefs) ->
-    indent_line(St, OldLine, CommandText, -1, Tablength, UseTabs, get_prefs(Prefs)).
+indent_line(St, OldLine, CommandText, IndentW, Tablength, UseTabs, Prefs) ->
+    indent_line(St, OldLine, CommandText, -1, IndentW, Tablength, UseTabs, get_prefs(Prefs)).
 
-indent_line(St, OldLine, CommandText, N, Tablength, UseTabs, Prefs) ->
+indent_line(St, OldLine, CommandText, N, _IndentW, Tablength, UseTabs, Prefs) ->
     ?D(St),
     S = erlide_text:detab(St, Tablength, all),
     StrippedCommandText = erlide_text:left_strip(CommandText),
@@ -121,6 +126,8 @@ get_prefs([{Key, Value} | Rest], OldP, Acc) ->
 get_prefs(Prefs) ->
     get_prefs(Prefs, default_indent_prefs(), []).
 
+%% TODO value 4 is hardcoded! Should use indentation width here
+
 indent(Tokens, LineOffsets, LineN, Prefs, OldLine) ->
     I = #i{anchor=hd(Tokens), indent_line=LineN, current=0, prefs=Prefs,
            in_block=true, old_line=OldLine},
@@ -151,17 +158,17 @@ get_indent_of(_A = #token{line=N, offset=O}, C, LineOffsets) ->
     ?D({O, LO, C, _A}),
     TI+C.
 
-indent_lines(S, From, Length, Tablength, UseTabs, Prefs) ->
+indent_lines(S, From, Length, IndentW, Tablength, UseTabs, Prefs) ->
     {First, FirstLineNum, Lines} = erlide_text:get_text_and_lines(S, From, Length),
-    do_indent_lines(Lines, Tablength, UseTabs, First, get_prefs(Prefs), FirstLineNum, "").
+    do_indent_lines(Lines, IndentW, Tablength, UseTabs, First, get_prefs(Prefs), FirstLineNum, "").
 
-template_indent_lines(Prefix, S, Tablength, UseTabs, Prefs) ->
+template_indent_lines(Prefix, S, IndentW, Tablength, UseTabs, Prefs) ->
     S0 = Prefix++S,
     S1 = quote_template_variables(S0),
     From = length(Prefix),
     Length = length(S1) - From,
     {First, FirstLineNum, Lines} = erlide_text:get_text_and_lines(S1, From, Length),
-    S2 = do_indent_lines(Lines, Tablength, UseTabs, First, get_prefs(Prefs), FirstLineNum, ""),
+    S2 = do_indent_lines(Lines, IndentW, Tablength, UseTabs, First, get_prefs(Prefs), FirstLineNum, ""),
     S3 = string:substr(S2, length(Prefix)+1, length(S2)-1),
     unquote_template_variables(S3).
 
@@ -169,10 +176,10 @@ template_indent_lines(Prefix, S, Tablength, UseTabs, Prefs) ->
 %% Local Functions
 %%
 
-do_indent_lines([], _, _, _, _, _, A) ->
+do_indent_lines([], _, _, _, _, _, _, A) ->
     A;
-do_indent_lines([Line | Rest], Tablength, UseTabs, Text, Prefs, N, Acc) ->
-    {NewI, _OldI, _AddNL} = indent_line(Text ++ Line, Line, "", N, Tablength, UseTabs, Prefs),
+do_indent_lines([Line | Rest], IndentW, Tablength, UseTabs, Text, Prefs, N, Acc) ->
+    {NewI, _OldI, _AddNL} = indent_line(Text ++ Line, Line, "", N, IndentW, Tablength, UseTabs, Prefs),
     ?D({do_indent_lines, Text++Line, NewI, N}),
     NewLine = case NewI of
                   error ->
@@ -181,7 +188,7 @@ do_indent_lines([Line | Rest], Tablength, UseTabs, Text, Prefs, N, Acc) ->
                       NewLine0 = reindent_line(Line, NewI),
                       entab(NewLine0, UseTabs, Tablength)
               end,
-    do_indent_lines(Rest, Tablength, UseTabs, Text ++ NewLine, Prefs, N+1, Acc++NewLine).
+    do_indent_lines(Rest, IndentW, Tablength, UseTabs, Text ++ NewLine, Prefs, N+1, Acc++NewLine).
 
 
 %%
