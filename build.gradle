@@ -19,37 +19,39 @@ import java.nio.file.Paths;
 import java.util.regex.Pattern
 import java.util.regex.Matcher
 
+def otpVersions = [
+    "r15": "R15B03-1",
+    "r16": "R16B03",
+    "17": "17.5",
+    "18": "18.3"
+]
+
 subprojects {
 
     ext {
-        otpDirs = [
-            "18": "${System.getProperty("user.home")}/erlide_tools/otp18",
-            "17": "${System.getProperty("user.home")}/erlide_tools/otp17",
-            "r16": "${System.getProperty("user.home")}/erlide_tools/otp16",
-            "r15": "${System.getProperty("user.home")}/erlide_tools/otp15"
-        ]
         context = detect_erlide_context(projectDir)
         otp_version = detect_otp(projectDir)
+        otpHome = "${System.getProperty('user.home')}/erlide_tools/${otpVersions[otp_version]}"
     }
 
     task clean(type: Exec) {
-        String otpHome = otpDirs[otp_version]
+        dependsOn ':setup'
         workingDir = projectDir
         environment['ERL_LIBS'] = "${System.getProperty("user.home")}/erlide_tools:${environment['ERL_LIBS']}"
         commandLine "${otpHome}/bin/escript", "${rootDir}/rebar", '-v', 'clean'
     }
 
     task build(type: Exec) {
-        String otpHome = otpDirs[otp_version]
+        dependsOn ':setup'
         workingDir = projectDir
         environment['ERL_LIBS'] = "${System.getProperty("user.home")}/erlide_tools:${environment['ERL_LIBS']}"
         commandLine "${otpHome}/bin/escript", "${rootDir}/rebar", '-v', 'compile'
     }
 
     task test(type: Exec) {
-        String otpHome = otpDirs[otp_version]
+        dependsOn ':setup'
         workingDir = projectDir
-        environment['ERL_LIBS'] = "${System.getProperty("user.home")}/erlide_tools:${environment['ERL_LIBS']}"
+        environment['ERL_LIBS'] = "${System.getProperty('user.home')}/erlide_tools:${environment['ERL_LIBS']}"
         commandLine "${otpHome}/bin/escript", "${rootDir}/rebar", '-v', 'skip_deps=true', 'eunit'
     }
 
@@ -130,6 +132,61 @@ String detect_version(File dir) {
     return "0.0.0"
 }
 
+List<String> run(cmds) {
+    def stdout = new ByteArrayOutputStream()
+    exec {
+        commandLine cmds
+        standardOutput = stdout
+    }
+    stdout.toString().readLines()
+}
+
+List<String> kerl(cmds) {
+    run(["${System.getProperty('user.home')}/erlide_tools/kerl"]+cmds)
+}
+
+String kerlBuildName(vsn) {
+    def r = kerl(['list', 'builds']).find {
+        def a = it.split(',')
+        a[0] == vsn
+    }
+    r? r.split(',')[1] : null
+}
+
+String kerlInstallationPath(name) {
+    def r = kerl(['list', 'installations']).find {
+        def a = it.split(' ')
+        a[0] == name
+    }
+    r? r.split(' ')[1] : null
+}
+
+task setup(){
+    println ("Setup Erlang tools - this might take a while, as we need to build 3 or 4 Erlang runtimes...")
+    println("Download kerl")
+    downloadTool('kerl', 'https://raw.githubusercontent.com/kerl/kerl/master/kerl',
+        true, "${System.getProperty('user.home')}/erlide_tools")
+    for(vsn in otpVersions.keySet()){
+        def name = kerlBuildName(otpVersions[vsn])
+        if(name == null) {
+            println("Build $vsn")
+            name = otpVersions[vsn]
+            kerl(['build', name, name])
+        } else {
+            println("Skip build $vsn ($name)")
+        }
+        def path = kerlInstallationPath(name)
+        if(path == null) {
+            println("Install $vsn")
+            path = "${System.getProperty('user.home')}/erlide_tools/${name}"
+            kerl(['install', name, path])
+        } else {
+            println("Skip install $vsn ($path)")
+        }
+    }
+    println "Done."
+}
+
 // **********************************************************************
 
 boolean isLinux() {
@@ -177,8 +234,9 @@ String osPath(String path) {
 
 void downloadTool(String name, String url, boolean exec, String destDir) {
     if(new File("${destDir}/${name}").exists()) {
-        println "Skip download $name"
+        println "Tool $name is already downloaded."
     } else {
+        println "Downloading tool $name..."
         download {
             src url
             dest "$destDir/$name"
