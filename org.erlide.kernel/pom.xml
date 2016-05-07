@@ -8,6 +8,6 @@
     </parent>
 
   <artifactId>org.erlide.kernel</artifactId>
-  <version><%= version %>-SNAPSHOT</version>
+  <version>0.102.1-SNAPSHOT</version>
   <packaging>eclipse-plugin</packaging>
 </project>

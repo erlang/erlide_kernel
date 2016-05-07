@@ -9,9 +9,7 @@ buildscript {
 }
 
 plugins {
-  id "com.github.jlouns.cpe" version "0.4.1"
   id "de.undercouch.download" version "2.1.0"
-  id 'com.google.osdetector' version "1.4.0"
 }
 
 import java.nio.file.Files;
@@ -20,7 +18,7 @@ import java.util.regex.Pattern
 import java.util.regex.Matcher
 
 def otpVersions = [
-    "r15": "R15B03-1",
+    //"r15": "R15B03-1",
     "r16": "R16B03",
     "17": "17.5",
     "18": "18.3"
@@ -31,6 +29,7 @@ subprojects {
     ext {
         context = detect_erlide_context(projectDir)
         otp_version = detect_otp(projectDir)
+        codeDirs = []
         otpHome = "${System.getProperty('user.home')}/erlide_tools/${otpVersions[otp_version]}"
     }
 
@@ -38,56 +37,79 @@ subprojects {
         dependsOn ':setup'
         workingDir = projectDir
         environment['ERL_LIBS'] = "${System.getProperty("user.home")}/erlide_tools:${environment['ERL_LIBS']}"
-        commandLine "${otpHome}/bin/escript", "${rootDir}/rebar", '-v', 'clean'
+        commandLine "${otpHome}/bin/escript", "${rootDir}/rebar3", 'clean'
     }
 
     task build(type: Exec) {
         dependsOn ':setup'
         workingDir = projectDir
         environment['ERL_LIBS'] = "${System.getProperty("user.home")}/erlide_tools:${environment['ERL_LIBS']}"
-        commandLine "${otpHome}/bin/escript", "${rootDir}/rebar", '-v', 'compile'
+        commandLine "${otpHome}/bin/escript", "${rootDir}/rebar3", 'compile'
     }
 
     task test(type: Exec) {
         dependsOn ':setup'
         workingDir = projectDir
-        environment['ERL_LIBS'] = "${System.getProperty('user.home')}/erlide_tools:${environment['ERL_LIBS']}"
-        commandLine "${otpHome}/bin/escript", "${rootDir}/rebar", '-v', 'skip_deps=true', 'eunit'
+        environment['ERL_LIBS'] = "${projectDir}/../erlide_kernel_common/_build/test/lib:${System.getProperty("user.home")}/erlide_tools:${environment['ERL_LIBS']}"
+        commandLine "${otpHome}/bin/escript", "${rootDir}/rebar3", 'do', 'eunit,cover'
     }
 
 }
 
-task assemble_base(type: Zip) {
-    baseName 'erlide_kernel'
+task assemble(type: Zip) {
+    destinationDir file('target')
+    baseName 'org.erlide.kernel'
     subprojects.findAll { !it.name.contains('debugger') }.each { subproject ->
         dependsOn subproject.build
+        def app = detect_app_name(subproject.projectDir)
         into("${subproject.context}") {
-            from subproject.file('ebin')
+            from subproject.file("_build/default/lib/${app}/ebin")
             exclude '.marker'
         }
+        subproject.codeDirs.add([
+                otp_version: subproject.otp_version.toUpperCase(),
+                path: "${subproject.context}",
+                context: subproject.context
+            ])
     }
-}
-
-task assemble_debugger(type: Zip) {
-    baseName 'erlide_kernel_debugger'
     subprojects.findAll { it.name.endsWith('debugger') }.each { subproject ->
         dependsOn subproject.build
+        def app = detect_app_name(subproject.projectDir)
         into("${subproject.context}") {
-            from subproject.file('ebin')
+            from subproject.file("_build/default/lib/${app}/ebin")
             exclude '.marker'
         }
+        subproject.codeDirs.add([
+                otp_version: subproject.otp_version.toUpperCase(),
+                path: "${subproject.context}",
+                context: subproject.context
+            ])
     }
     subprojects.findAll { it.name.contains('debugger_') }.each { subproject ->
         dependsOn subproject.build
+        def app = detect_app_name(subproject.projectDir)
         into("${subproject.context}/${subproject.otp_version}") {
-            from subproject.file('ebin')
+            from subproject.file("_build/default/lib/${app}/ebin")
             exclude '.marker'
         }
+        subproject.codeDirs.add([
+                otp_version: subproject.otp_version.toUpperCase(),
+                path: "${subproject.context}/${subproject.otp_version}",
+                context: subproject.context
+            ])
     }
+    into("") {
+        from file("org.erlide.kernel")
+        def env = loadEnvironment()
+        expand env
+    }
+    outputs.upToDateWhen { false }
 }
 
-task assemble {
-     dependsOn tasks.withType(Zip)
+def loadEnvironment() {
+    def properties = new Properties()
+    properties.codeDirs = subprojects.collect { it.codeDirs }.flatten().unique()
+    properties
 }
 
 String detect_otp(File dir) {
@@ -99,7 +121,22 @@ String detect_otp(File dir) {
         String r = m.group(1)
         return r.toLowerCase()
     }
-    return "r15"
+    return "r16"
+}
+
+String detect_app_name(File dir) {
+    File srcDir = new File(dir, 'src')
+    File appSrc = srcDir.listFiles().find { it.name.endsWith('.app.src') }
+    if(appSrc==null) return "error"
+
+    java.nio.file.Path path = Paths.get(appSrc.path)
+    byte[] encoded = Files.readAllBytes(path)
+    String text = new String(encoded, 'UTF-8')
+    Pattern p = Pattern.compile("\\{application, *([^,]+),")
+    Matcher m = p.matcher(text)
+    if(m.find())
+        return m.group(1)
+    return "unknown"
 }
 
 String detect_erlide_context(File dir) {
@@ -125,7 +162,7 @@ String detect_version(File dir) {
     java.nio.file.Path path = Paths.get(appSrc.path)
     byte[] encoded = Files.readAllBytes(path)
     String text = new String(encoded, 'UTF-8')
-    Pattern p = Pattern.compile("\\{vsn, *([^\\}]+)\\}")
+    Pattern p = Pattern.compile("\\{vsn, \"*([^\"]+)\"\\}")
     Matcher m = p.matcher(text)
     if(m.find())
         return m.group(1)
@@ -162,124 +199,42 @@ String kerlInstallationPath(name) {
 }
 
 task setup(){
-    println ("Setup Erlang tools - this might take a while, as we need to build 3 or 4 Erlang runtimes...")
+    println ("Setup Erlang tools - the first time, this might take up to 30 minutes, as we need to build 3 or 4 Erlang runtimes...")
     println("Download kerl")
     downloadTool('kerl', 'https://raw.githubusercontent.com/kerl/kerl/master/kerl',
         true, "${System.getProperty('user.home')}/erlide_tools")
+    kerl(['update', 'releases'])
     for(vsn in otpVersions.keySet()){
         def name = kerlBuildName(otpVersions[vsn])
         if(name == null) {
-            println("Build $vsn")
+            println("Build OTP $name")
             name = otpVersions[vsn]
             kerl(['build', name, name])
         } else {
-            println("Skip build $vsn ($name)")
+            println("OTP $name already built")
         }
         def path = kerlInstallationPath(name)
         if(path == null) {
-            println("Install $vsn")
+            println("Install OTP $name")
             path = "${System.getProperty('user.home')}/erlide_tools/${name}"
             kerl(['install', name, path])
         } else {
-            println("Skip install $vsn ($path)")
+            println("OTP $name ($path) already installed")
         }
     }
     println "Done."
 }
 
-// **********************************************************************
-
-boolean isLinux() {
-    OperatingSystem.current().isLinux()
-}
-boolean isWindows() {
-    OperatingSystem.current().isWindows()
-}
-boolean isMacOsX() {
-    OperatingSystem.current().isMacOsX()
-}
-
-List otpRoots = [
-    "${System.env.HOME}/.kerl/installs",
-    "${rootDir}/.tools"
-]
-
-Map versions = [
-    "ubuntu": ["trusty", "precise", "vivid"],
-    "debian": ["wheezy"],
-    "osx": ["10.10"]
-]
-
-Map qualifiers = [
-    "windows": [qualifier: "windows", version: null, ext: "exe"],
-    "ubuntu": [qualifier: "ubuntu", version: "trusty", ext: "deb"],
-    "debian": [qualifier: "debian", version: "wheezy", ext: "deb"],
-    "osx": [qualifier: "osx", version: "10.10", ext: "dmg"]
-]
-
-String otpArchiveName(String version, String os, String osversion, String ext) {
-    String osver = osversion==null? os: "$os~$osversion"
-    return "esl-erlang_${version}-1~${osver}_amd64.${ext}"
-}
-
-void setupTools() {
-    new File("${rootDir}/.tools").mkdir()
-
-    installOtp()
-}
-
-String osPath(String path) {
-    "${new File(path)}"
-}
-
-void downloadTool(String name, String url, boolean exec, String destDir) {
-    if(new File("${destDir}/${name}").exists()) {
+void downloadTool(String name, String url, boolean exec, String destDir, boolean force=true) {
+    if(!force && new File("${destDir}/${name}").exists()) {
         println "Tool $name is already downloaded."
-    } else {
-        println "Downloading tool $name..."
-        download {
-            src url
-            dest "$destDir/$name"
-        }
+        return
     }
-    if(exec) ant.chmod(dir: "$destDir", perm:"ug+x", includes:"$name")
+    println "Downloading tool $name..."
+    download {
+        src url
+        dest "$destDir/$name"
+    }
+    if(exec)
+        ant.chmod(dir: destDir, perm:"ug+x", includes: name)
 }
-
-void installOtp() {
-    String archiveName = downloadOtp()
-
-    String destDir = osPath("$rootDir/.tools/otp18")
-    println "INSTALL $archiveName in $destDir"
-    if(new File(destDir).exists()){
-        println "Skip, already installed."
-    } else {
-        if(isLinux()) {
-            //exec {
-            //    commandLine 'cmd', '/c', archiveName, '/S', "/D=$destDir"
-            //}
-        }else if(isWindows()) {
-            //exec {
-            //  commandLine 'cmd', '/c', archiveName, '/S', "/D=$destDir"
-            //}
-        } else {
-            println "we don't support ${OperatingSystem.current()}"
-        }
-    }
-}
-
-String downloadOtp() {
-    String archiveName = null
-    if(isLinux()) {
-            archiveName = null
-    }else if(isWindows()) {
-        archiveName  = otpArchiveName("18.2", "windows", null, "exe")
-    } else {
-        println "we don't support ${OperatingSystem.current()}"
-    }
-    if(archiveName != null) {
-        //downloadTool archiveName, "http://packages.erlang-solutions.com/site/esl/esl-erlang/FLAVOUR_1_general/$archiveName", false, "${rootDir}/.tools"
-    }
-    archiveName
-}
-
-

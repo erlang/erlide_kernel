@@ -3,9 +3,9 @@
 <plugin>
    <extension
          point="org.erlide.runtime.codepath">
-<% for (x: codeDirs) { %>
+<% for (x in codeDirs) { %>
      <beam_dir
-            path="<%= x.path %>">
+            path="<%= x.path %>"
             context="<%= x.context %>"
             otp_version="<%= x.otp_version %>">
       </beam_dir>
