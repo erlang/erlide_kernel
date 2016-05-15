@@ -9,7 +9,14 @@
 -export([]).
 -compile(export_all).
 
+-include("erlide_api.hrl").
+
 %%% Basic API
+
+%% Projects
+
+get_projects() ->
+    ok.
 
 %% Apps
 
@@ -82,12 +89,33 @@ update_form_info() ->
 
 %%% Advanced API
 
-search_definitions() ->
+start_search_definitions() ->
     ok.
 
-search_references() ->
+cancel_search_definitions() ->
+    ok.
+
+get_definitions() ->
+    ok.
+
+search_definition() ->
+    ok.
+
+start_search_references() ->
+    ok.
+
+cancel_search_references() ->
+    ok.
+
+get_references() ->
     ok.
 
 get_call_stack() ->
+    ok.
+
+complete_code() ->
+    ok.
+
+rename() ->
     ok.
 
