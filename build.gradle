@@ -63,8 +63,14 @@ task assemble(type: Zip) {
         dependsOn subproject.build
         def app = detect_app_name(subproject.projectDir)
         into("${subproject.context}") {
-            from subproject.file("_build/default/lib/${app}/ebin")
-            exclude '.marker'
+            from subproject.file("_build/default/lib/")
+            include "**/*.beam"
+            include "**/*.app"
+            includeEmptyDirs = false
+            eachFile { fcp->
+                if (fcp.isDirectory()) { fcp.exclude(); println(fcp) }
+                fcp.path = "${subproject.context}/${fcp.name}"
+            }
         }
         subproject.codeDirs.add([
                 otp_version: subproject.otp_version.toUpperCase(),
@@ -76,8 +82,14 @@ task assemble(type: Zip) {
         dependsOn subproject.build
         def app = detect_app_name(subproject.projectDir)
         into("${subproject.context}") {
-            from subproject.file("_build/default/lib/${app}/ebin")
-            exclude '.marker'
+            from subproject.file("_build/default/lib/")
+            include "**/*.beam"
+            include "**/*.app"
+            includeEmptyDirs = false
+            eachFile { fcp->
+                if (fcp.isDirectory()) fcp.exclude()
+                fcp.path = "${subproject.context}/${fcp.name}"
+            }
         }
         subproject.codeDirs.add([
                 otp_version: subproject.otp_version.toUpperCase(),
@@ -89,8 +101,14 @@ task assemble(type: Zip) {
         dependsOn subproject.build
         def app = detect_app_name(subproject.projectDir)
         into("${subproject.context}/${subproject.otp_version}") {
-            from subproject.file("_build/default/lib/${app}/ebin")
-            exclude '.marker'
+            from subproject.file("_build/default/lib/")
+            include "**/*.beam"
+            include "**/*.app"
+            includeEmptyDirs = false
+            eachFile { fcp->
+                if (fcp.isDirectory()) fcp.exclude()
+                fcp.path = "${subproject.context}/${subproject.otp_version}/${fcp.name}"
+            }
         }
         subproject.codeDirs.add([
                 otp_version: subproject.otp_version.toUpperCase(),
