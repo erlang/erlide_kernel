@@ -69,11 +69,11 @@ get_otp_lib_structure(StateDir) ->
                        CodeLibs = code:get_path(),
                        LibDir = code:lib_dir(),
                        Libs = lists:filter(fun(N) -> lists:prefix(LibDir, N) end, CodeLibs),
-                       LibDirs = [get_lib_dir(Lib) || Lib<-Libs],
+                       LibDirs = [get_lib_dir(Lib) || Lib <- lists:sort(Libs)],
                        R = lists:map(fun(Dir) ->
                                              SubDirs = ["src", "include"],
                                              Group = get_app_group(Dir),
-                                             {Dir, get_dirs(SubDirs, get_lib_dir(Dir), []), Group}
+                                             {Dir, get_dirs(SubDirs, Dir, []), Group}
                                      end, LibDirs),
                        ?D(R),
                        R
@@ -92,7 +92,7 @@ get_app_group(Dir) ->
             case file:read_line(F) of
                 {ok, "group:"++Group} ->
                     Val = string:strip(string:strip(Group),right, $\n),
-                    case lists:split(string:chr(Val, $\s), Val) of
+                    case split_at_first_char($\s, Val) of
                         {[], A} ->
                             A;
                         {A, _} ->
@@ -104,6 +104,9 @@ get_app_group(Dir) ->
         _->
             ""
     end.
+
+split_at_first_char(Char, String) ->
+    lists:split(string:chr(String, Char), String).
 
 get_dirs([], _, Acc) ->
     lists:reverse(Acc);
@@ -120,7 +123,7 @@ get_dirs([Dir | Rest], Base, Acc) ->
 get_lib_files(Dir) ->
     case file:list_dir(Dir) of
         {ok, SrcFiles} ->
-            Files = [filename:join(Dir, SrcFile) || SrcFile <- SrcFiles],
+            Files = [filename:join(Dir, SrcFile) || SrcFile <- lists:sort(SrcFiles)],
             {ok, lists:filter(fun(F) -> filelib:is_regular(F) end, Files)};
         _ ->
             {ok, []}
@@ -129,7 +132,7 @@ get_lib_files(Dir) ->
 get_includes_in_dir(Dir) ->
     case file:list_dir(Dir) of
         {ok, Files} ->
-            {ok, filter_includes(Files)};
+            {ok, filter_includes(lists:sort(Files))};
         _ ->
             {ok, []}
     end.
