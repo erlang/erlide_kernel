@@ -1,10 +1,10 @@
-Erlang engine for source code indexing and manipulation, that can be used by code editors and IDES to provide advanced .
+Generic Erlang engine for source code indexing and manipulation, that can be used by code editors and IDES to provide advanced functionality.
 
-Different IDEs implement clients that use this kernel to do the real work. Currently, only an Eclipse client is implemented (see the [erlide_eclipse](https://github.com/erlide/erlide_eclipse) repository).
+Different IDEs implement clients that use this kernel to do the real work. Currently, only an Eclipse client is implemented (see the [erlide_eclipse](https://github.com/erlang/erlide_eclipse) repository).
 
 # Important note
 
-**The content of this repository is highly volatile at the moment**. I am working on stabilizing it (structure and release engineering) and will remove this notice when it is safe to use by third parties.
+**The content of this repository is highly volatile at the moment**. I am working on stabilizing it (structure, release engineering, APIs) and I will remove this notice when it is safe to use by third parties.
 
 Initially, the content is the same as it was in the erlide repository.
 
@@ -24,9 +24,9 @@ The erlide kernel will implement the core functionality of an IDE:
 - launch the projects' code and interact with it (debug, trace, profile)
 - launch, examine and interact with Erlang nodes
 
-The API will be accessible via the network, using serialized Erlang terms, but in the future a REST API could be useful (for clients that don't talk Erlang). Parts of the API will be asynchronous, so that progress information and partial results can be returned to the client when available; these parts will be marked as such.
+The API will be accessible via the network, using serialized Erlang terms, but in the future a REST API could be useful (for clients that don't talk Erlang). [Detailed API description](API.md). Parts of the API will be asynchronous, so that progress information and partial results can be returned to the client when available; these parts will be marked as such.
 
-The API is meant to be generic i.e. without Eclipse-related leaking abstractions, but we might borrow some of the concepts (like for example, the workspace as a container for several projects).
+The API is meant to be generic i.e. without Eclipse-related leaky abstractions, but we might borrow some of the concepts (like for example, the workspace as a container for several projects).
 
 ## Notes
 
