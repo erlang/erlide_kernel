@@ -1,0 +1,13 @@
+{application, erlide_kernel,
+  [
+   {vsn, "0.102.0"},
+   {erlide_context, ide},
+   {registered,   []},
+   {applications, [kernel, stdlib,
+                    gproc,
+                    erlide_common, erlide_ide
+                  ]},
+   {env,          []},
+   {mod, {erlide_kernel_app, []}}
+   ]}
+.

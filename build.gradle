@@ -22,7 +22,7 @@ def otpVersions = [
     "r16": "R16B03",
     "17": "17.5",
     "18": "18.3",
-    "19": "19.0-rc1"
+    "19": "19.0"
 ]
 
 subprojects {
@@ -226,7 +226,7 @@ task setup(){
     for(vsn in otpVersions.keySet()){
         def name = kerlBuildName(otpVersions[vsn])
         if(name == null) {
-            println("Build OTP $name")
+            println("Build OTP $vsn")
             name = otpVersions[vsn]
             kerl(['build', name, name])
         } else {
