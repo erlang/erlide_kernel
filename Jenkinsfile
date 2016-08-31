@@ -34,7 +34,7 @@ node {
 stage 'Publish'
 node {
     wrap([$class: 'TimestamperBuildWrapper']) {
-        publishRelease(archive)
+        //publishRelease(archive)
     }
 }
 
