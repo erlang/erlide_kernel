@@ -34,7 +34,7 @@ node {
 stage 'Publish'
 node {
     wrap([$class: 'TimestamperBuildWrapper']) {
-        //publishRelease(archive)
+        publishRelease(archive)
     }
 }
 
@@ -98,7 +98,7 @@ def archive() {
 
 @NonCPS
 def getVersion(String archive) {
-    def m = (archive =~ /org.erlide.kernel_([0-9]+\.[0-9]+\.[0-9]+)\.(.+).zip/)
+    def m = (archive =~ /org.erlide.kernel_([0-9]+\.[0-9]+\.[0-9]+)(\.(.+))?.zip/)
     return m[0]
 }
 
@@ -106,6 +106,10 @@ def publishRelease(def archive) {
     def isMaster = (git_branch=='master')
     sh "git remote get-url origin > REPO"
     def isMainRepo = readFile('REPO').trim().contains('github.com/erlang/')
+
+    // FIXME we can't push to https git url, needs password... Jenkins Github plugin uses https...
+    return
+
     if(!isMaster || !isMainRepo) {
         // only do a github release if on master and in main repo
         return
@@ -124,7 +128,7 @@ def publishRelease(def archive) {
     if(git_tag == null || git_tag == '') {
         sh "git tag -a ${vvsn} -m ${vvsn}"
         //sh "git push origin ${vvsn}"
-        //git_tag = vvsn
+        git_tag = vvsn
     }
     if(git_tag != vvsn) {
         // if there is a tag, but it's not $vvsn, skip publishing
