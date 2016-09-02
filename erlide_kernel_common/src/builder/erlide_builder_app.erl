@@ -1,13 +1,12 @@
 -module(erlide_builder_app).
 
 -export([
-     init/0
+     init/1
     ]).
 
-init() ->
+init(MaxParallelBuilds) ->
   spawn(fun()->
-          %% is started by erlide_common
-          %% erlide_pool:start(erlide_builder),
+          erlide_pool:start(erlide_builder, MaxParallelBuilds),
           ok
       end),
   ok.
