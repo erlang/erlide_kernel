@@ -17,7 +17,7 @@ startup(JRex, Kill, HeapWarnLimit, HeapKillLimit, MaxParallelBuilds)->
     erlang:system_monitor(erlang:whereis(erlide_monitor),
                           [{long_gc, 3000}, {large_heap, HeapWarnLimit*1000000 div 2}]),
 
-    erlide_batch:start(erlide_builder, MaxParallelBuilds),
+    erlide_pool:start(erlide_builder, MaxParallelBuilds),
     ok.
 
 watch_eclipse(JavaNode, Kill) ->
