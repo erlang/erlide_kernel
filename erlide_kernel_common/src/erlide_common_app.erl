@@ -1,23 +1,21 @@
 -module(erlide_common_app).
 
 -export([
-         init/5
+         init/4
         ]).
 
-init(JRex, Kill, HeapWarnLimit, HeapKillLimit, MaxParallelBuilds) ->
+init(JRex, Kill, HeapWarnLimit, HeapKillLimit) ->
     spawn(fun () ->
-                   startup(JRex, Kill, HeapWarnLimit, HeapKillLimit, MaxParallelBuilds)
+                   startup(JRex, Kill, HeapWarnLimit, HeapKillLimit)
           end).
 
-startup(JRex, Kill, HeapWarnLimit, HeapKillLimit, MaxParallelBuilds)->
+startup(JRex, Kill, HeapWarnLimit, HeapKillLimit)->
     erlide_jrpc:init(JRex),
     watch_eclipse(node(JRex), Kill),
 
     erlide_monitor:start(HeapWarnLimit, HeapKillLimit),
     erlang:system_monitor(erlang:whereis(erlide_monitor),
                           [{long_gc, 3000}, {large_heap, HeapWarnLimit*1000000 div 2}]),
-
-    erlide_batch:start(erlide_builder, MaxParallelBuilds),
     ok.
 
 watch_eclipse(JavaNode, Kill) ->

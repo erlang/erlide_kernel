@@ -44,7 +44,7 @@ compile(F, OutputDir, IncludeDirs) ->
     compile(F, OutputDir, IncludeDirs, []).
 
 compile(F, OutputDir, IncludeDirs, Options) ->
-    erlide_batch:call(?MODULE, fun compile_options/3,[F, [return, binary | mk_includes(IncludeDirs)]++Options, OutputDir]).
+    erlide_pool:call(?MODULE, fun compile_options/3,[F, [return, binary | mk_includes(IncludeDirs)]++Options, OutputDir]).
 
 %% Compile Erlang file taking various compile options into account
 compile_options(F, Options, OutputDir) ->
@@ -77,7 +77,7 @@ mk_includes(L) ->
     [{i, X} || X <- L].
 
 compile_yrl(In, Out) ->
-    erlide_batch:call(?MODULE, fun do_compile_yrl/2, [In, Out]).
+    erlide_pool:call(?MODULE, fun do_compile_yrl/2, [In, Out]).
 
 do_compile_yrl(In, Out) ->
     erlide_yecc_msgs:start(),

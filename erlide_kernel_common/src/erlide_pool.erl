@@ -13,7 +13,7 @@
 %% Description: A server that processes requests in a pool of worker processes.
 %%   It's a simple implementation, do not use for large pools.
 
--module(erlide_batch).
+-module(erlide_pool).
 
 %%
 %% Include files

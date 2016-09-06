@@ -107,9 +107,6 @@ def publishRelease(def archive) {
     sh "git remote get-url origin > REPO"
     def isMainRepo = readFile('REPO').trim().contains('github.com/erlang/')
 
-    // FIXME we can't push to https git url, needs password... Jenkins Github plugin uses https...
-    return
-
     if(!isMaster || !isMainRepo) {
         // only do a github release if on master and in main repo
         return
@@ -119,8 +116,9 @@ def publishRelease(def archive) {
     def vsn = v[1]
     def ts = v[2]
     def vvsn = "v${vsn}"
-    sh "git push origin :refs/tags/${vvsn}"
-    sh "git fetch --prune origin +refs/tags/*:refs/tags/*"
+    // FIXME we can't push to https git url, needs password... Jenkins Github plugin uses https...
+    //sh "git push origin :refs/tags/${vvsn}"
+    //sh "git fetch --prune origin +refs/tags/*:refs/tags/*"
 
     sh 'rm -rf GIT_TAG'
     sh 'git describe --exact-match > GIT_TAG || true'
@@ -139,20 +137,23 @@ def publishRelease(def archive) {
     def body = ""
     def owner = "erlang"
     def repository = "erlide_kernel"
-    def access_token = "${env.GITHUB_TOKEN}"
+    def access_token = "${env.GITHUB_TOKEN___}" // the token will be printed in console output...
 
     sh "rm -rf RELEASE"
     def API_create="{\"tag_name\": \"${vvsn}\",\"name\": \"${vvsn}\",\"body\": \"${body}\",\"draft\": ${draft},\"prerelease\": false}"
     sh "curl -H \"Content-Type:application/json\" --data '${API_create}' https://api.github.com/repos/${owner}/${repository}/releases?access_token=${access_token} > RELEASE"
     def release = readFile('RELEASE').trim()
     def info = getReleaseInfo(release)
-    def release_id = info[1]
-    sh "curl -X POST --header \"Content-Type:application/edn\" --data-binary @target/${archive} https://uploads.github.com/repos/${owner}/${repository}/releases/${release_id}/assets?access_token=${access_token}\\&name=${archive}"
+    if(info != null) {
+        def release_id = info[1]
+        sh "curl -X POST --header \"Content-Type:application/edn\" --data-binary @target/${archive} https://uploads.github.com/repos/${owner}/${repository}/releases/${release_id}/assets?access_token=${access_token}\\&name=${archive}"
+    }
 }
 
 @NonCPS
 def getReleaseInfo(String data) {
     def m = (data.replaceAll("\n"," ").trim() =~ /\{[^{]*"id": *([^,]*),.*/)
+    if(!m) return null
     return m[0]
 }
 
