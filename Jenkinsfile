@@ -73,17 +73,11 @@ def analyze() {
     step([$class: 'WarningsPublisher', canComputeNew: false, canResolveRelativePaths: false,
         consoleParsers: [[parserName: 'Erlang Compiler (erlc)']],
         excludePattern: '', healthy: '', includePattern: '', messagesPattern: '', unHealthy: ''])
-
     step([$class: 'TasksPublisher', canComputeNew: false, excludePattern: '**/_build/**/*.*,**/.eunit/**/*.*', healthy: '', high: 'FIXME,XXX', low: '', normal: 'TODO', pattern: '**/*.erl,**/*.hrl', unHealthy: ''])
-
     step([$class: 'AnalysisPublisher', canComputeNew: false, healthy: '', unHealthy: ''])
-
     step([$class: 'JUnitResultArchiver', allowEmptyResults: true, testResults: '**/TEST*.xml'])
-
+	step([$class: 'JacocoPublisher', exclusionPattern: '', sourcePattern: '**/src/'])
     // locks
-
-    // jacoco
-
 }
 
 def archive() {
