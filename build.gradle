@@ -18,8 +18,6 @@ import java.util.regex.Pattern
 import java.util.regex.Matcher
 
 def otpVersions = [
-    //"r15": "R15B03-1",
-    "r16": "R16B03",
     "17": "17.5",
     "18": "18.3",
     "19": "19.0"

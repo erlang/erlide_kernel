@@ -293,14 +293,14 @@ flat(L) ->
 
 -record(file_plt, {version = ""                :: string(),
                    file_md5_list = []          :: [file_md5()],
-                   info = dict:new()           :: dict(),
-                   contracts = dict:new()      :: dict(),
-                   types = dict:new()          :: dict(),
-                   exported_types = sets:new() :: set(),
+                   info = dict:new()           :: dict:dict(),
+                   contracts = dict:new()      :: dict:dict(),
+                   types = dict:new()          :: dict:dict(),
+                   exported_types = sets:new() :: set:set(),
                    mod_deps                    :: mod_deps(),
                    implementation_md5 = []     :: [file_md5()]}).
 
--type mod_deps() :: dict().
+-type mod_deps() :: dict:dict().
 -type err_rsn() :: 'not_valid' | 'no_such_file' | 'read_error'.
 -type md5_diff()    :: [{'differ', atom()} | {'removed', atom()}].
 -type check_error() :: err_rsn() | {'no_file_to_remove', file:filename()}.
@@ -522,7 +522,7 @@ expand_dependent_modules_1([], Included, _ModDeps) ->
          external_calls  = []             :: [mfa()],
          external_types  = []             :: [mfa()],
          legal_warnings  = ordsets:new()  :: [dial_warn_tag()],
-         mod_deps        = dict:new()     :: dict(),
+         mod_deps        = dict:new()     :: dict:dict(),
          output          = standard_io    :: io:device(),
          output_format   = formatted,%      :: format(),
          filename_opt    = basename,%       :: fopt(),
