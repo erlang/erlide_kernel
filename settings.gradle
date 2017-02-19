@@ -1,7 +1,0 @@
-rootProject.name = 'erlide_kernel'
-
-rootProject.projectDir
-  .listFiles({ it.isDirectory() && it.absolutePath.contains('erlide_kernel_') && it.list().contains('rebar.config')} as FileFilter)
-  .each { File subdir ->
-  	include subdir.absolutePath.substring(rootProject.projectDir.absolutePath.length() + 1).replace(File.separator, ':')
-	}

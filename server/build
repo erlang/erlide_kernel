@@ -1,0 +1,15 @@
+#! /bin/bash
+
+source ../build_utils.sh
+
+echo "Building $prj..."
+
+export LOCALDEP_DIR=`pwd`/../
+cd ../ide
+
+dir=`pwd`
+prj=`basename $dir`
+build_project ../rebar3 $prj 19 escriptize
+cp _build/default/bin/erlide_ide ../server/
+
+cd ../server

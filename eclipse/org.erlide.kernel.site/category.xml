@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<site>
+   <feature id="org.erlide.kernel.feature">
+      <category name="erlide"/>
+   </feature>
+   <category-def name="erlide" label="erlide - Erlang development tools"/>
+</site>

@@ -1,41 +1,60 @@
 #!groovy
 
-stage 'Checkout'
-node {
-    wrap([$class: 'TimestamperBuildWrapper']) {
-        checkout()
-    }
-}
+pipeline {
+	agent any
+	options {
+		disableConcurrentBuilds()
+		timestamps()
+		skipDefaultCheckout()
+		buildDiscarder(logRotator(numToKeepStr: '10'))
+	}
+	stages {
+		stage('Checkout') {
+			steps{
+				retry(3) {
+					timeout(time: 30, unit: 'SECONDS') {
+						script {
+							checkout()
+						}
+					}
+				}
+			}
+		}
 
-stage 'Compile'
-node {
-    wrap([$class: 'TimestamperBuildWrapper']) {
-        compile()
-    }
-}
+		stage('Compile') {
+			steps{
+				script {
+					compile()
+					analyze()
+				}
+			}
+		}
 
-//stage 'Tests'
-//  runTests()
+		stage('Eclipse') {
+			steps{
+				script {
+					buildEclipse()
+                    publishEclipse()
+				}
+			}
+		}
 
-stage 'Analyze'
-node {
-    wrap([$class: 'TimestamperBuildWrapper']) {
-        analyze()
-    }
-}
+		stage('Server') {
+			steps{
+				script {
+                    buildServer()
+                    publishServer()
+				}
+			}
+		}
+	}
+	//post {
+		//always {
+			//deleteDir()
+		//}
+	//}
 
-stage 'Archive'
-node {
-    wrap([$class: 'TimestamperBuildWrapper']) {
-        archive = archive()
-    }
-}
 
-stage 'Publish'
-node {
-    wrap([$class: 'TimestamperBuildWrapper']) {
-        publishRelease(archive)
-    }
 }
 
 ///////////////////////////////////
@@ -54,40 +73,43 @@ def checkout() {
     git_commit=readFile('GIT_COMMIT')
     short_commit=git_commit.take(6)
 
-    //currentBuild.setName("${short_commit}__${env.BUILD_NUMBER}")
     currentBuild.setDescription("${git_branch} - ${short_commit}")
 }
 
 def compile() {
-    wrap([$class: 'Xvfb', displayNameOffset: 100, installationName: 'xvfb', screen: '1024x768x24']) {
-        sh "chmod u+x gradlew"
-        sh "./gradlew build test assemble"
-
-        if(git_branch=="master") {
-            // TODO rename product artifacts
-        }
-    }
+    sh "chmod u+x build"
+    sh "./build"
 }
 
 def analyze() {
     step([$class: 'WarningsPublisher', canComputeNew: false, canResolveRelativePaths: false,
         consoleParsers: [[parserName: 'Erlang Compiler (erlc)']],
         excludePattern: '', healthy: '', includePattern: '', messagesPattern: '', unHealthy: ''])
-    step([$class: 'TasksPublisher', canComputeNew: false, excludePattern: '**/_build/**/*.*,**/.eunit/**/*.*', healthy: '', high: 'FIXME,XXX', low: '', normal: 'TODO', pattern: '**/*.erl,**/*.hrl', unHealthy: ''])
+    step([$class: 'TasksPublisher', canComputeNew: false, excludePattern: '**/_build/**/*.*', healthy: '', high: 'FIXME,XXX', low: '', normal: 'TODO', pattern: '**/*.erl,**/*.hrl', unHealthy: ''])
     step([$class: 'AnalysisPublisher', canComputeNew: false, healthy: '', unHealthy: ''])
     step([$class: 'JUnitResultArchiver', allowEmptyResults: true, testResults: '**/TEST*.xml'])
-	step([$class: 'JacocoPublisher', exclusionPattern: '', sourcePattern: '**/src/'])
-    // locks
+	//step([$class: 'JacocoPublisher', exclusionPattern: '', sourcePattern: '**/src/'])
+    // we need Cobertura...
+    // publishHTML([
+    //     allowMissing: false,
+    //     alwaysLinkToLastBuild: false,
+    //     keepAll: true,
+    //     reportDir: '',
+    //     reportFiles:
+    //     '''common/_build/test/index.html
+    //     ''',
+    //     reportName: 'Coverage Report'
+    //     ])
 }
 
-def archive() {
-    sh 'rm -rf VSN'
-    sh 'cat org.erlide.kernel/META-INF/MANIFEST.MF | grep "Bundle-Version:" | cut -d " " -f 2 > VSN'
-    def vsn = readFile('VSN').trim().replace('.qualifier', '')
-    def archive = "org.erlide.kernel_${vsn}.zip"
-    sh "mv target/org.erlide.kernel.zip ${archive}"
-    step([$class: 'ArtifactArchiver', artifacts: archive, fingerprint: true])
-    return archive
+def buildEclipse() {
+    sh "cd eclipse && ./build && cd .."
+    step([$class: 'ArtifactArchiver', artifacts: "eclipse/org.erlide.kernel.site-*.zip", fingerprint: true])
+}
+
+def buildServer() {
+    sh "cd server && ./build && cd .."
+    step([$class: 'ArtifactArchiver', artifacts: "server/erlide_ide", fingerprint: true])
 }
 
 @NonCPS
@@ -96,7 +118,8 @@ def getVersion(String archive) {
     return m[0]
 }
 
-def publishRelease(def archive) {
+def publishEclipse() {
+    def archive = "org.erlide.kernel.site-.zip"
     def isMaster = (git_branch=='master')
     sh "git remote get-url origin > REPO"
     def isMainRepo = readFile('REPO').trim().contains('github.com/erlang/')
@@ -151,3 +174,5 @@ def getReleaseInfo(String data) {
     return m[0]
 }
 
+def publishServer() {
+}
