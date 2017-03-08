@@ -128,7 +128,8 @@ def publishEclipse() {
         // only do a github release if on master and in main repo
         return
     }
-
+    // TODO not working for now
+    return
     def v = getVersion(archive)
     def vsn = v[1]
     def ts = v[2]
