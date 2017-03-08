@@ -114,7 +114,7 @@ def buildServer() {
 
 @NonCPS
 def getVersion(String archive) {
-    def m = (archive =~ /org.erlide.kernel_([0-9]+\.[0-9]+\.[0-9]+)(\.(.+))?.zip/)
+    def m = (archive =~ /org.erlide.kernel[-_]([0-9]+\.[0-9]+\.[0-9]+)(\.(.+))?.zip/)
     return m[0]
 }
 
@@ -128,7 +128,8 @@ def publishEclipse() {
         // only do a github release if on master and in main repo
         return
     }
-
+    // TODO not working for now
+    return
     def v = getVersion(archive)
     def vsn = v[1]
     def ts = v[2]
