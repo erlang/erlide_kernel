@@ -1,0 +1,13 @@
+#! /bin/bash
+
+cd erlide_debugger_17
+./build "$@"
+cd ../erlide_debugger_18
+./build "$@"
+cd ../erlide_debugger_19
+./build "$@"
+
+cd ../erlide_debugger
+./build "$@"
+
+cd ..

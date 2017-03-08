@@ -1,0 +1,2 @@
+[{<<"erlide_common">>,{localdep,"common/apps/erlide_common"},0},
+ {<<"erlide_debugger_17">>,{localdep,"debugger/erlide_debugger_17"},0}].

@@ -1,0 +1,41 @@
+#! /bin/bash
+
+source ../build_utils.sh
+
+dir=`pwd`
+prj=`basename $dir`
+
+echo "Building $prj..."
+
+rm -rf org.erlide.kernel.common/ebin
+rm -rf org.erlide.kernel.debugger/ebin
+rm -rf org.erlide.kernel.ide/ebin
+
+mkdir -p org.erlide.kernel.common/ebin
+mkdir -p org.erlide.kernel.debugger/ebin
+mkdir -p org.erlide.kernel.debugger/ebin/17
+mkdir -p org.erlide.kernel.debugger/ebin/18
+mkdir -p org.erlide.kernel.debugger/ebin/19
+mkdir -p org.erlide.kernel.ide/ebin
+
+# what if we keep the otp app structure? /priv might be useful
+
+find ../common/_build/default/lib -type f \( -name "*.beam" -o -name "*.app" \) -exec cp {} org.erlide.kernel.common/ebin/ \;
+find ../debugger/erlide_debugger/_build/default/lib -type f \( -name "*.beam" -o -name "*.app" \) ! -path "*/erlide_debugger_17/*" -exec cp {} org.erlide.kernel.debugger/ebin/ \;
+find ../debugger/erlide_debugger_17/_build/default/lib -type f \( -name "*.beam" -o -name "*.app" \) -exec cp {} org.erlide.kernel.debugger/ebin/17/ \;
+find ../debugger/erlide_debugger_18/_build/default/lib -type f \( -name "*.beam" -o -name "*.app" \) -exec cp {} org.erlide.kernel.debugger/ebin/18/ \;
+find ../debugger/erlide_debugger_19/_build/default/lib -type f \( -name "*.beam" -o -name "*.app" \) -exec cp {} org.erlide.kernel.debugger/ebin/19/ \;
+find ../ide/_build/default/lib -type f \( -name "*.beam" -o -name "*.app" \) -exec cp {} org.erlide.kernel.ide/ebin/ \;
+
+VSN=`get_feature_vsn org.erlide.kernel.feature`
+
+chmod u+x mvnw
+./mvnw -B -U tycho-versions:set-version -DnewVersion=${VSN}.qualifier -Dartifacts=org.erlide.kernel.feature,org.erlide.kernel.debugger,org.erlide.kernel.ide,org.erlide.kernel.site,org.erlide.kernel.common
+# there will be an error if versions don't match
+./mvnw -B -U clean verify
+
+mv org.erlide.kernel.site/target/org.erlide.kernel.site-*.zip .
+f=`ls org.erlide.kernel.site-*.zip`
+newName=${f/-SNAPSHOT/}
+mv "$f" "$newName"
+

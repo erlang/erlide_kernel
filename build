@@ -1,0 +1,43 @@
+#! /bin/bash
+
+source ./build_utils.sh
+
+setup_otp() {
+    echo "Setup Erlang tools - the first time, this might take 30 minutes or more, as we need to build up to 4 Erlang runtimes..."
+    if [ ! -e ~/erlide_tools/kerl ]; then
+        curl -s 'https://raw.githubusercontent.com/kerl/kerl/master/kerl' > ~/erlide_tools/kerl
+        chmod u+x ~/erlide_tools/kerl
+    fi
+    ~/erlide_tools/kerl update releases > /dev/null
+
+    for v in "${OTP_VSNS[@]}"; do
+        ~/erlide_tools/kerl build $v $v
+        if [ ! -e ~/erlide_tools/$v ]; then
+            ~/erlide_tools/kerl install $v ~/erlide_tools/$v
+        else
+            echo "OTP $v already installed"
+        fi
+    done
+}
+
+export LOCALDEP_DIR=`pwd`
+export REBAR_COLOR="low"
+#export QUIET=1
+
+main() {
+    setup_otp
+    find . -name build | xargs chmod u+x
+
+    cmds="do clean -a, compile, eunit -c -v, cover -v"
+
+    cd common
+    ./build $cmds
+    cd ../debugger
+    ./build $cmds
+    cd ../ide
+    ./build $cmds
+
+    cd ..
+}
+
+time main

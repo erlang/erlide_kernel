@@ -18,11 +18,9 @@ import java.util.regex.Pattern
 import java.util.regex.Matcher
 
 def otpVersions = [
-    //"r15": "R15B03-1",
-    "r16": "R16B03",
     "17": "17.5",
     "18": "18.3",
-    "19": "19.0"
+    "19": "19.2"
 ]
 
 subprojects {
@@ -51,7 +49,7 @@ subprojects {
     task test(type: Exec) {
         dependsOn ':setup'
         workingDir = projectDir
-        environment['ERL_LIBS'] = "${projectDir}/../erlide_kernel_common/_build/test/lib:${System.getProperty("user.home")}/erlide_tools:${environment['ERL_LIBS']}"
+        environment['ERL_LIBS'] = "${projectDir}/../erlide_common/_build/test/lib:${System.getProperty("user.home")}/erlide_tools:${environment['ERL_LIBS']}"
         commandLine "${otpHome}/bin/escript", "${rootDir}/rebar3", 'do', 'eunit,cover'
     }
 
@@ -140,7 +138,7 @@ String detect_otp(File dir) {
         String r = m.group(1)
         return r.toLowerCase()
     }
-    return "r16"
+    return "r17"
 }
 
 String detect_app_name(File dir) {
