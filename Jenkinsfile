@@ -114,7 +114,7 @@ def buildServer() {
 
 @NonCPS
 def getVersion(String archive) {
-    def m = (archive =~ /org.erlide.kernel_([0-9]+\.[0-9]+\.[0-9]+)(\.(.+))?.zip/)
+    def m = (archive =~ /org.erlide.kernel[-_]([0-9]+\.[0-9]+\.[0-9]+)(\.(.+))?.zip/)
     return m[0]
 }
 
