@@ -28,8 +28,13 @@ main() {
     setup_otp
     find . -name build | xargs chmod u+x
 
-    cmds="do clean -a, compile, eunit -c -v, cover -v"
+    if [ -z "$1" ]; then
+        cmds="do clean -a, compile"
+    else
+        cmds="do eunit -c -v, cover -v"
+    fi
 
+    set -e
     cd common
     ./build $cmds
     cd ../debugger
@@ -40,4 +45,4 @@ main() {
     cd ..
 }
 
-time main
+main

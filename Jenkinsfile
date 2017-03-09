@@ -25,7 +25,16 @@ pipeline {
 			steps{
 				script {
 					compile()
-					analyze()
+					analyze1()
+				}
+			}
+		}
+
+		stage('Test') {
+			steps{
+				script {
+					test()
+					analyze2()
 				}
 			}
 		}
@@ -81,11 +90,19 @@ def compile() {
     sh "./build"
 }
 
-def analyze() {
-    step([$class: 'WarningsPublisher', canComputeNew: false, canResolveRelativePaths: false,
+def test() {
+    sh "chmod u+x build"
+    sh "./build test"
+}
+
+def analyze1() {
+    step([$class: 'WarningsPublisher', canComputeNew: false, canResolveRelativePaths: true, canRunOnFailed: true,
         consoleParsers: [[parserName: 'Erlang Compiler (erlc)']],
         excludePattern: '', healthy: '', includePattern: '', messagesPattern: '', unHealthy: ''])
     step([$class: 'TasksPublisher', canComputeNew: false, excludePattern: '**/_build/**/*.*', healthy: '', high: 'FIXME,XXX', low: '', normal: 'TODO', pattern: '**/*.erl,**/*.hrl', unHealthy: ''])
+}
+
+def analyze2() {
     step([$class: 'AnalysisPublisher', canComputeNew: false, healthy: '', unHealthy: ''])
     step([$class: 'JUnitResultArchiver', allowEmptyResults: true, testResults: '**/TEST*.xml'])
 	//step([$class: 'JacocoPublisher', exclusionPattern: '', sourcePattern: '**/src/'])
