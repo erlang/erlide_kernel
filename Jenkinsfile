@@ -97,7 +97,7 @@ def test() {
 
 def analyze1() {
     step([$class: 'WarningsPublisher', canComputeNew: false, canResolveRelativePaths: true, canRunOnFailed: true,
-        consoleParsers: [[parserName: 'Erlang Compiler (erlc)']],
+        consoleParsers: [[parserName: 'Erlang Compiler (erlc)'], [parserName: 'Maven']],
         excludePattern: '', healthy: '', includePattern: '', messagesPattern: '', unHealthy: ''])
     step([$class: 'TasksPublisher', canComputeNew: false, excludePattern: '**/_build/**/*.*', healthy: '', high: 'FIXME,XXX', low: '', normal: 'TODO', pattern: '**/*.erl,**/*.hrl', unHealthy: ''])
 }
