@@ -93,6 +93,7 @@ def compile() {
 def test() {
     sh "chmod u+x build"
     sh "./build test"
+     sleep 3L
 }
 
 def analyze1() {
