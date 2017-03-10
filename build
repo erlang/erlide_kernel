@@ -31,7 +31,7 @@ main() {
     if [ -z "$1" ]; then
         cmds="do clean -a, compile"
     else
-        cmds="do eunit -c -v, cover -v"
+        cmds="do eunit -c, cover -v"
     fi
 
     set -e
