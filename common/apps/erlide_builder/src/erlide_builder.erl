@@ -29,7 +29,7 @@
 
 %%-define(DEBUG, 1).
 
--include("erlide_dbglog.hrl").
+-include_lib("erlide_common/include/erlide_dbglog.hrl").
 
 -define(ERROR, 0).
 -define(WARNING, 1).

@@ -2,7 +2,7 @@
 
 %%-define(DEBUG, 1).
 
--include("erlide_dbglog.hrl").
+-include_lib("erlide_common/include/erlide_dbglog.hrl").
 
 %% dummy i/o server to capture output from yecc and convert it to warnings/errors
 
