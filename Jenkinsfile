@@ -89,7 +89,8 @@ def compile() {
 def test() {
     sh "chmod u+x build"
     sh "./build test"
-     sleep 2L
+    sleep 2L
+    sh "find . -name \"TEST-*.xml\" -exec xargs rename -v 's/\"//' {} \\;"
 }
 
 def analyze1() {

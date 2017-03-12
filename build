@@ -25,13 +25,15 @@ export REBAR_COLOR="low"
 #export QUIET=1
 
 main() {
+    arg=$1
+
     setup_otp
     find . -name build | xargs chmod u+x
 
-    if [ -z "$1" ]; then
-        cmds="do clean -a, compile"
+    if [ "$arg" != "test" ]; then
+        cmds="do clean -a, compile -v"
     else
-        cmds="do eunit -c, cover -v"
+        cmds="do eunit -c -v, cover -v"
     fi
 
     set -e
@@ -45,4 +47,4 @@ main() {
     cd ..
 }
 
-main
+main "$@"

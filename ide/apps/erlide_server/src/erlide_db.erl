@@ -28,7 +28,7 @@
 %% It is kind of like a ctags DB, but has more information.
 %%
 
--type kind() :: 'module' | 'include' | 'function' | 'macro' | 'record' | 'field' | 'variable' | 'type' | 'ifdef'.
+%-type kind() :: 'module' | 'include' | 'function' | 'macro' | 'record' | 'field' | 'variable' | 'type' | 'ifdef'.
 -type range() :: {Line::integer(), Column::integer(), Offset::integer()} | 'undefined'.
 
 -define(COMMON_PROPS, keyRange := range(), defRange := range()).
