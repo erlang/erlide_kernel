@@ -1,6 +1,5 @@
 %% Author: jakob
 %% Created: 12 okt 2009
-%% Description: TODO: Add description to erlide_scanner_tests
 -module(erlide_scanner_tests).
 
 %%

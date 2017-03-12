@@ -1,5 +1,4 @@
 %% coding: utf-8
-%% Description: TODO: Add description to erlide_scanner_tests
 -module(erlide_scan_tests).
 
 %%

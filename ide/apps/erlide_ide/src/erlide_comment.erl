@@ -1,6 +1,5 @@
 %% Author: jakob
 %% Created: Mar 23, 2006
-%% Description: TODO: Add description to erlide_comment
 
 -module(erlide_comment).
 

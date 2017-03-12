@@ -5,5 +5,6 @@
         ]).
 
 init() ->
+    io:format("Start server app~n"),
     ok.
 

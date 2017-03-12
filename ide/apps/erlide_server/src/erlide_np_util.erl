@@ -1,6 +1,5 @@
 %% Author: jakob
 %% Created: 7 nov 2010
-%% Description: TODO: Add description to erlide_np_util
 -module(erlide_np_util).
 
 %% -define(DEBUG, 1).

@@ -5,5 +5,6 @@
         ]).
 
 init() ->
+    io:format("Start ide app~n"),
     ok.
 

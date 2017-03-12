@@ -1,6 +1,5 @@
 %% Author: jakob
 %% Created: 30 aug 2010
-%% Description: TODO: Add description to erlide_parsing_test
 -module(erlide_parsing_tests).
 
 %%

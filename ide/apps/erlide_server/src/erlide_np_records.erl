@@ -1,6 +1,5 @@
 %% Author: jakob
 %% Created: 18 dec 2010
-%% Description: TODO: Add description to erlide_np_records
 -module(erlide_np_records).
 
 %%

@@ -30,7 +30,6 @@
          compile_string/1,
          start_tracer/1,
 
-         get_system_info/0,
          get_module_info/1
         ]).
 
@@ -44,7 +43,7 @@ parse_term(Str) ->
 
 parse_term_raw(Str) ->
     %% erlide_log:logp(Str),
-    %% use the OTP erl_scan here! 
+    %% use the OTP erl_scan here!
     {ok, Tokens, _} = erl_scan:string(Str),
     %% erlide_log:logp(Tokens),
     R=erl_parse:parse_term(Tokens),
@@ -121,7 +120,7 @@ execute(StrFun, Args) ->
     catch case parse_string(StrMod) of
               {ok, Mod} ->
                   {ok, erlide_execute_tmp,Bin} = compile:forms(Mod, [report,binary]),
-                  code:load_binary(erlide_execute_tmp, "erlide_execute_tmp.erl", Bin),
+                  _ = code:load_binary(erlide_execute_tmp, "erlide_execute_tmp.erl", Bin),
                   Res = erlide_execute_tmp:exec(Args),
                   code:delete(erlide_execute_tmp),
                   code:purge(erlide_execute_tmp),
@@ -209,7 +208,4 @@ print_opts({K, V}) ->
     io_lib:format("    ~p:   ~p~n", [K, V]);
 print_opts(X) ->
     io_lib:format("    ~p~n", [X]).
-
-get_system_info() ->
-    lists:flatten(io_lib:format("~p~n", [erlide_monitor:get_state()])).
 

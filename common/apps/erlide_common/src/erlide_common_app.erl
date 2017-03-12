@@ -5,6 +5,7 @@
         ]).
 
 init(JRex, Kill, HeapWarnLimit, HeapKillLimit) ->
+    io:format("Start common app~n"),
     spawn(fun () ->
                    startup(JRex, Kill, HeapWarnLimit, HeapKillLimit)
           end).

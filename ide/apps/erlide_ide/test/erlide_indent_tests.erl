@@ -1,6 +1,5 @@
 %% Author: jakob
 %% Created: 24 nov 2009
-%% Description: TODO: Add description to erlide_indent_tests
 -module(erlide_indent_tests).
 
 %%

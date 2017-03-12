@@ -113,7 +113,7 @@ handle_input(Client, State, Input) ->
                 {done, Result, []} ->
                     #io_request{from = From,
                                 reply_as = ReplyAs} = FirstReq,
-                    io_reply(From, ReplyAs, Result),
+                    _ = io_reply(From, ReplyAs, Result),
                     case length(RestReqs) of
                         0 ->
                             {ok, idle};
@@ -126,7 +126,7 @@ handle_input(Client, State, Input) ->
                 {done, Result, RestChars} ->
                     #io_request{from = From,
                                 reply_as = ReplyAs} = FirstReq,
-                    io_reply(From, ReplyAs, Result),
+                    _ = io_reply(From, ReplyAs, Result),
                     case length(RestReqs) of
                         0 ->
                             {ok, {pending_input, RestChars}};
@@ -150,7 +150,7 @@ put_chars(From, ReplyAs, State, Encoding, Mod, Fun, Args) ->
            end,
     FlatText = string_flatten(Text),
     send_event(FlatText, From, Encoding),
-    io_reply(From, ReplyAs, ok),
+    _ = io_reply(From, ReplyAs, ok),
     {ok, State}.
 
 
@@ -181,7 +181,7 @@ get_until(From, ReplyAs, Client, State, _Encoding, Prompt, Mod, Fun, Args) ->
 put_chars(From, ReplyAs, State, Encoding, Text) ->
     FlatText = string_flatten(Text),
     send_event(FlatText, From, Encoding),
-    io_reply(From, ReplyAs, ok),
+    _ = io_reply(From, ReplyAs, ok),
     {ok, State}.
 
 
@@ -213,13 +213,13 @@ handle_io_request(Client, State, From, ReplyAs, IoRequest) ->
             handle_io_requests(Client, State, From, ReplyAs, IoReqests);
 
         getopts ->
-            io_reply(From, ReplyAs, [{encoding, latin1}]),
+            _ = io_reply(From, ReplyAs, [{encoding, latin1}]),
             {ok, State};
 
         UnexpectedIORequest ->
             loginfo("~p:handle_io_request: Unexpected IORequest:~p~n",
                     [?MODULE, UnexpectedIORequest]),
-            io_reply(From, ReplyAs, ok),
+            _ = io_reply(From, ReplyAs, ok),
             {ok, State}
     end.
 
