@@ -70,14 +70,9 @@ pipeline {
 
 def checkout() {
     deleteDir()
-    if(env.BRANCH_NAME != null) { // multi branch
-        checkout scm
-        git_branch = env.BRANCH_NAME
-    } else {
-        git url: 'git@github.com:vladdu/erlide_kernel.git', branch: 'pu'
-        sh 'git symbolic-ref --short HEAD > GIT_BRANCH'
-        git_branch=readFile('GIT_BRANCH').trim()
-    }
+    checkout scm
+    git_branch = env.BRANCH_NAME
+
     sh('git rev-parse HEAD > GIT_COMMIT')
     git_commit=readFile('GIT_COMMIT')
     short_commit=git_commit.take(6)
@@ -88,12 +83,13 @@ def checkout() {
 def compile() {
     sh "chmod u+x build"
     sh "./build"
+     sleep 2L
 }
 
 def test() {
     sh "chmod u+x build"
     sh "./build test"
-     sleep 3L
+     sleep 2L
 }
 
 def analyze1() {
