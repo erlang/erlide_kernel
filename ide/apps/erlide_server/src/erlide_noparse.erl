@@ -23,7 +23,7 @@
 -define(CACHE_VERSION, 31).
 -define(SERVER, erlide_noparse).
 
--include("erlide_dbglog.hrl").
+-include_lib("erlide_common/include/erlide_dbglog.hrl").
 -include("erlide_noparse.hrl").
 -include("erlide_scanner_server.hrl").
 -include("erlide_search.hrl").

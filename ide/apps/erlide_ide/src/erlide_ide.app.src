@@ -3,7 +3,7 @@
    {vsn, "0.101.2"},
    {erlide_context, ide},
    {registered,   []},
-   {applications, [kernel, stdlib, erlide_common]},
+   {applications, [kernel, stdlib, erlide_common, erlide_server]},
    {env,          []},
    {mod, {erlide_ide_app, []}}
    ]}

@@ -15,7 +15,7 @@
          contentChange/4
         ]).
 
--include("erlide_dbglog.hrl").
+-include_lib("erlide_common/include/erlide_dbglog.hrl").
 
 %% For now we have a simple content model: a string.
 

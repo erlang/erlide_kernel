@@ -9,7 +9,7 @@
 
 %% -define(DEBUG, 1).
 
--include("erlide_dbglog.hrl").
+-include_lib("erlide_common/include/erlide_dbglog.hrl").
 -include("erlide_token.hrl").
 -include("erlide_scanner_server.hrl").
 

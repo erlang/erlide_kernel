@@ -1,10 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <projectDescription>
-	<name>erlide_ide</name>
+	<name>erlide_server</name>
 	<comment></comment>
 	<projects>
 		<project>erlide_common</project>
-		<project>erlide_server</project>
 	</projects>
 	<buildSpec>
 		<buildCommand>
