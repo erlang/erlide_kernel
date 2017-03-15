@@ -24,3 +24,5 @@ build/
 TEST-*.*
 
 
+
+server/erlide_ide

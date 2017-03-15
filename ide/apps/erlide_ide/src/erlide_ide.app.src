@@ -1,9 +1,10 @@
 {application, erlide_ide,
   [
-   {vsn, "0.101.2"},
+   {vsn, "0.113.0"},
    {erlide_context, ide},
    {registered,   []},
    {applications, [kernel, stdlib, erlide_common, erlide_server]},
-   {env,          []}
+   {env,          []},
+   {mod, {erlide_ide, []}}
    ]}
 .
