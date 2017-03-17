@@ -17,11 +17,9 @@ init([]) ->
     {ok, {{one_for_all, 0, 1}, Children}}.
 
 children() ->
-    IdeServer = {erlide_ide_server, {erlide_ide_server, start_link, [get_app_args()]},
-        permanent, 60000, worker, [erlide_ide_server]},
+    IdeServer = {erlide_lsp_server, {erlide_lsp_server, start_link, []},
+        permanent, 60000, worker, [erlide_lsp_server]},
     [
         IdeServer
     ].
 
-get_app_args() ->
-    init:get_arguments().

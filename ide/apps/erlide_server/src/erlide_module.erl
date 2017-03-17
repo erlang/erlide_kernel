@@ -38,17 +38,17 @@ loop(State) ->
             ok;
         {get_string_content, From} ->
             From ! {module_content, State#state.content},
-            ?MODULE:loop(State);
+            loop(State);
         {get_binary_content, From} ->
             From ! {module_content, list_to_binary(State#state.content)},
-            ?MODULE:loop(State);
+            loop(State);
         {change, Offset, Length, Text}=_Msg ->
             % erlide_log:logp("Module ~s:: ~p", [Name, _Msg]),
             Content1 = replace_text(State#state.content, Offset, Length, Text),
-            ?MODULE:loop(State#state{content=Content1});
+            loop(State#state{content=Content1});
         Msg ->
             erlide_log:logp("Unknown message in module ~s: ~p", [Name, Msg]),
-            ?MODULE:loop(State)
+            loop(State)
     end.
 
 replace_text(Initial, Offset, Length, Text) ->

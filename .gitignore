@@ -26,3 +26,4 @@ TEST-*.*
 
 
 server/erlide_ide
+*.crashdump
