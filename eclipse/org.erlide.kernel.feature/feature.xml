@@ -2,14 +2,13 @@
 <feature
       id="org.erlide.kernel.feature"
       label="Erlang IDE kernel"
-      version="0.113.0.qualifier"
+      version="0.114.0.qualifier"
       provider-name="%vendorName"
-      image="erlang-64.gif"
->
+      image="erlang-64.gif">
    <install-handler/>
 
    <description>
-   		Erlang implementation of the IDE support
+      Erlang implementation of the IDE support
    </description>
 
    <copyright>
@@ -34,21 +33,18 @@ is available from http://www.eclipse.org/legal/epl-v10.html
          id="org.erlide.kernel.common"
          download-size="0"
          install-size="0"
-         version="0.0.0"
-         unpack="true"/>
+         version="0.0.0"/>
 
    <plugin
          id="org.erlide.kernel.debugger"
          download-size="0"
          install-size="0"
-         version="0.0.0"
-         unpack="true"/>
+         version="0.0.0"/>
 
    <plugin
          id="org.erlide.kernel.ide"
          download-size="0"
          install-size="0"
-         version="0.0.0"
-         unpack="true"/>
+         version="0.0.0"/>
 
 </feature>
