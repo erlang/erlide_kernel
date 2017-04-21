@@ -5,5 +5,6 @@
         ]).
 
 init() ->
+    io:format("Start tools app~n"),
     ok.
 

@@ -25,7 +25,16 @@ pipeline {
 			steps{
 				script {
 					compile()
-					analyze()
+					analyze1()
+				}
+			}
+		}
+
+		stage('Test') {
+			steps{
+				script {
+					test()
+					analyze2()
 				}
 			}
 		}
@@ -61,14 +70,9 @@ pipeline {
 
 def checkout() {
     deleteDir()
-    if(env.BRANCH_NAME != null) { // multi branch
-        checkout scm
-        git_branch = env.BRANCH_NAME
-    } else {
-        git url: 'git@github.com:vladdu/erlide_kernel.git', branch: 'pu'
-        sh 'git symbolic-ref --short HEAD > GIT_BRANCH'
-        git_branch=readFile('GIT_BRANCH').trim()
-    }
+    checkout scm
+    git_branch = env.BRANCH_NAME
+
     sh('git rev-parse HEAD > GIT_COMMIT')
     git_commit=readFile('GIT_COMMIT')
     short_commit=git_commit.take(6)
@@ -79,13 +83,24 @@ def checkout() {
 def compile() {
     sh "chmod u+x build"
     sh "./build"
+     sleep 2L
 }
 
-def analyze() {
-    step([$class: 'WarningsPublisher', canComputeNew: false, canResolveRelativePaths: false,
-        consoleParsers: [[parserName: 'Erlang Compiler (erlc)']],
+def test() {
+    sh "chmod u+x build"
+    sh "./build test"
+    sleep 2L
+    sh "find . -name \"TEST-*.xml\" -exec xargs rename -v 's/\"//' {} \\;"
+}
+
+def analyze1() {
+    step([$class: 'WarningsPublisher', canComputeNew: false, canResolveRelativePaths: true, canRunOnFailed: true,
+        consoleParsers: [[parserName: 'Erlang Compiler (erlc)'], [parserName: 'Maven']],
         excludePattern: '', healthy: '', includePattern: '', messagesPattern: '', unHealthy: ''])
     step([$class: 'TasksPublisher', canComputeNew: false, excludePattern: '**/_build/**/*.*', healthy: '', high: 'FIXME,XXX', low: '', normal: 'TODO', pattern: '**/*.erl,**/*.hrl', unHealthy: ''])
+}
+
+def analyze2() {
     step([$class: 'AnalysisPublisher', canComputeNew: false, healthy: '', unHealthy: ''])
     step([$class: 'JUnitResultArchiver', allowEmptyResults: true, testResults: '**/TEST*.xml'])
 	//step([$class: 'JacocoPublisher', exclusionPattern: '', sourcePattern: '**/src/'])
@@ -108,8 +123,8 @@ def buildEclipse() {
 }
 
 def buildServer() {
-    sh "cd server && ./build && cd .."
-    step([$class: 'ArtifactArchiver', artifacts: "server/erlide_ide", fingerprint: true])
+    sh "cd ide && ./build escriptize && cd .."
+    step([$class: 'ArtifactArchiver', artifacts: "ide/_build/default/bin/erlide_ide", fingerprint: true])
 }
 
 @NonCPS

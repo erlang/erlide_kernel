@@ -1,6 +1,6 @@
-#! /bin/bash
+#! /bin/bash -e
 
-declare -A OTP_VSNS=( ["17"]="17.5" ["18"]="18.3" ["19"]="19.2")
+declare -A OTP_VSNS=( ["17"]="17.5" ["18"]="18.3" ["19"]="19.3")
 
 build_project() {
     REBAR=$1

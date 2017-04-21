@@ -1,6 +1,5 @@
 %% Author: jakob
 %% Created: 17 feb 2010
-%% Description: TODO: Add description to erlide_dialyze
 -module(erlide_dialyze).
 
 %%

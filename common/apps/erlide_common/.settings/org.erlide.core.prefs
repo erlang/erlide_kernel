@@ -1,4 +1,4 @@
-backend_version=R15
+backend_version=17.0
 compiler/warn_deprecated_function=true
 compiler/warn_export_all=true
 compiler/warn_export_vars=true
@@ -13,5 +13,5 @@ external_includes=
 external_modules=
 include_dirs=include;
 output_dir=ebin
-source_dirs=src;src/builder;
+source_dirs=src;
 use_pathz=false

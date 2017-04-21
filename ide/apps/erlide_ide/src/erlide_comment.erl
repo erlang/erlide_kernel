@@ -1,6 +1,5 @@
 %% Author: jakob
 %% Created: Mar 23, 2006
-%% Description: TODO: Add description to erlide_comment
 
 -module(erlide_comment).
 
@@ -15,7 +14,7 @@
 
 %-define(DEBUG, 1). %
 
--include("erlide_dbglog.hrl").
+-include_lib("erlide_common/include/erlide_dbglog.hrl").
 
 %%
 %% API Functions

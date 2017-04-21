@@ -4,7 +4,6 @@
    {erlide_context, common},
    {registered,   []},
    {applications, [kernel, stdlib, erlide_common]},
-   {env,          []},
-   {mod, {erlide_tools_app, []}}
+   {env,          []}
    ]}
 .

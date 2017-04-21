@@ -20,8 +20,8 @@
 %% -define(IO_FORMAT_DEBUG, 1).
 %% -define(DEBUG, 1).
 
--include("erlide_dbglog.hrl").
--include("erlide_token.hrl").
+-include_lib("erlide_common/include/erlide_dbglog.hrl").
+-include_lib("erlide_server/include/erlide_token.hrl").
 
 %% TODO change into multiples of IndentW
 default_indent_prefs() ->

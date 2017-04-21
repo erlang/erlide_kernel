@@ -1,6 +1,5 @@
 %% Author: jakob
 %% Created: 20 dec 2010
-%% Description: TODO: Add description to erlide_search_tests
 -module(erlide_search_tests).
 
 %%

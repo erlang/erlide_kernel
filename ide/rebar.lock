@@ -1,1 +1,5 @@
-[{<<"erlide_common">>,{localdep,"common/apps/erlide_common"},0}].
+[{<<"erlide_common">>,{localdep,"../common/apps/erlide_common"},0},
+ {<<"jsx">>,
+  {git,"https://github.com/talentdeficit/jsx.git",
+       {ref,"d4b6d3dc5fd9e759ff7a0c476654ea5124f5bae9"}},
+  0}].
