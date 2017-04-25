@@ -11,7 +11,7 @@ build_project() {
     shift
 
     echo ""
-    echo "Building $PRJ with OTP ${OTP_VSNS[$VSN]}..."
+    echo "Building --$PRJ-- with OTP ${OTP_VSNS[$VSN]}..."
     ~/erlide_tools/${OTP_VSNS[$VSN]}/bin/escript $REBAR "$@"
 }
 

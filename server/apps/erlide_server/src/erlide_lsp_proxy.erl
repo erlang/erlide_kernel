@@ -1,12 +1,21 @@
 -module(erlide_lsp_proxy).
 
 -export([
-		 start/1
+		 start_link/1
 		]).
 
+start_link(Args) ->
+	Pid = spawn_link(fun() ->
+				start(Args)
+			end),
+	{ok, Pid}.
+
 start([Server, Port]) ->
-	case gen_tcp:connect("localhost", Port, [binary, {packet, 0}, {active, true}]) of
+	io:format("Start proxy on port ~w~n", [Port]),
+    {ok, LSock} = gen_tcp:listen(Port, [binary, {packet, 0}, {active, true}]),
+	case gen_tcp:accept(LSock) of
 		{ok, Socket} ->
+			io:format("Listening on: ~p~n", [Socket]),
 			loop(Socket, Server, <<"">>, 0);
 		Err ->
 			io:format("Connection error: ~p~n", [Err]),

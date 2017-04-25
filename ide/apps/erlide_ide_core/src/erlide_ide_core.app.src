@@ -1,4 +1,4 @@
-{application, erlide_server,
+{application, erlide_ide_core,
   [
    {vsn, "0.113.0"},
    {erlide_context, ide},
