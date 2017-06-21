@@ -1,0 +1,9 @@
+{application, erlide_debugger_20,
+  [
+   {vsn, "4.2.2"},
+   {erlide_context, debugger},
+   {registered,   []},
+   {applications, [kernel, stdlib]},
+   {env,          []}
+   ]}
+.

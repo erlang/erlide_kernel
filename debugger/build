@@ -6,7 +6,8 @@ cd ../erlide_debugger_18
 ./build "$@"
 cd ../erlide_debugger_19
 ./build "$@"
-
+cd ../erlide_debugger_20
+./build "$@"
 cd ../erlide_debugger
 ./build "$@"
 
