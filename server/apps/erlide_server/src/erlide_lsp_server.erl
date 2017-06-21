@@ -168,7 +168,7 @@ handle_cast({'textDocument/rename', Id, #{textDocument:=#{uri:=URI}, position:=P
 handle_cast({show_message, Type, Msg}, State = #state{proxy = Proxy}) ->
 	Proxy ! {notify, 'window/showMessage',
 			 #{type => Type,
-			   message => iolist_to_binary(Msg)}},
+			   message => unicode:characters_to_binary(Msg)}},
 	{noreply, State};
 handle_cast({show_message_request, Type, Msg, Actions, Pid}, State = #state{proxy = Proxy}) ->
 	Id = State#state.crt_id,
@@ -178,14 +178,14 @@ handle_cast({show_message_request, Type, Msg, Actions, Pid}, State = #state{prox
 						  },
 	Proxy ! {request, Id, 'window/showMessageRequest',
 			 #{type => Type,
-			   message => iolist_to_binary(Msg),
+			   message => unicode:characters_to_binary(Msg),
 			   actions => Actions}
 			},
 	{noreply, NewState};
 handle_cast({log_message, Type, Msg}, State = #state{proxy = Proxy}) ->
 	Proxy ! {notify, 'window/logMessage',
 			 #{type => Type,
-			   message => iolist_to_binary(Msg)}},
+			   message => unicode:characters_to_binary(Msg)}},
 	{noreply, State};
 handle_cast({telemetry_event, Msg}, State = #state{proxy = Proxy}) ->
 	Proxy ! {notify, 'telemetry/event', Msg},
@@ -209,7 +209,7 @@ handle_cast({_F, _A}=Other, State) ->
 	{noreply, State};
 handle_cast({F, Id, A}, State) ->
 	FN = atom_to_binary(F, latin1),
-	AN = iolist_to_binary(io_lib:format("~p~n", [A])),
+	AN = unicode:characters_to_binary(lists:flatten(io_lib:format("~p~n", [A]))),
 	io:format("Unrecognized operation ~p~n", [{FN, AN}]),
 	reply(State, Id, #{error => #{code => method_not_found,
 								  message => <<"Unrecognized method ", FN/binary,
