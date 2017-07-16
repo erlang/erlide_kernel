@@ -11,7 +11,7 @@
 
 -include_lib("erlide_common/include/erlide_dbglog.hrl").
 
--include_lib("erlide_server/include/erlide_search.hrl").
+-include_lib("erlide_ide_core/include/erlide_search.hrl").
 
 %%
 %% Exported Functions

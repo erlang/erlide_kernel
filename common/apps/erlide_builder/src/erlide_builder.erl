@@ -71,7 +71,7 @@ compile_options(F, Options, OutputDir) ->
 format_compile_msg(L, Marker) when is_list(L) ->
     lists:flatten([format_compile_msg(X, Marker) || X <- L]);
 format_compile_msg({File, L}, Marker) ->
-    [{Ln, File, iolist_to_binary(M:format_error(D)), Marker} || {Ln, M, D} <- L].
+    [{Ln, File, unicode:characters_to_binary(lists:flatten(M:format_error(D))), Marker} || {Ln, M, D} <- L].
 
 mk_includes(L) ->
     [{i, X} || X <- L].

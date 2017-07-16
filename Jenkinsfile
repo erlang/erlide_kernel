@@ -123,8 +123,8 @@ def buildEclipse() {
 }
 
 def buildServer() {
-    sh "cd ide && ./build escriptize && cd .."
-    step([$class: 'ArtifactArchiver', artifacts: "ide/_build/default/bin/erlide_ide", fingerprint: true])
+    sh "cd server && ./build escriptize && cd .."
+    step([$class: 'ArtifactArchiver', artifacts: "server/_build/default/bin/erlide_server", fingerprint: true])
 }
 
 @NonCPS

@@ -25,16 +25,22 @@ export REBAR_COLOR="low"
 #export QUIET=1
 
 main() {
-    arg=$1
+    arg=${1:-compile}
 
     setup_otp
     find . -name build | xargs chmod u+x
 
-    if [ "$arg" != "test" ]; then
-        cmds="do clean -a, compile -v"
-    else
-        cmds="do eunit -c -v, cover -v"
-    fi
+    case "$arg" in
+        "compile")
+            cmds="do clean -a, compile -v"
+            ;;
+        "test")
+            cmds="do eunit -c -v, cover -v"
+            ;;
+        "verify")
+            cmds="do xref, dialyzer"
+            ;;
+    esac
 
     set -e
     cd common
@@ -43,6 +49,11 @@ main() {
     ./build $cmds
     cd ../ide
     ./build $cmds
+    cd ../server
+    ./build $cmds
+    if [ "$arg" == "compile" ] ; then
+        ./build escriptize
+    fi
 
     cd ..
 }

@@ -13,7 +13,7 @@
 %% -define(DEBUG, 1).
 
 -include_lib("erlide_common/include/erlide_dbglog.hrl").
--include_lib("erlide_server/include/erlide_token.hrl").
+-include_lib("erlide_ide_core/include/erlide_token.hrl").
 
 
 %%

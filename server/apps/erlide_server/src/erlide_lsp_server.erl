@@ -6,7 +6,7 @@
 -behaviour(gen_server).
 
 -export([
-		 start_link/0,
+		 start_link/1,
 		 
 		 show_message/2,
 		 show_message_request/3,
@@ -29,19 +29,9 @@
 				internal_state
 			   }).
 
--define(DEFAULT_PORT, "9000").
-
-start_link() ->
-	%% TODO better parse cmdline args
-	Port0 = application:get_env(erlide_ide, main_args, [?DEFAULT_PORT]),
-	Port = list_to_integer(hd(Port0)),
-	Proxy = spawn_link(fun() ->
-							   erlide_lsp_proxy:start([?SERVER, Port])
-					   end),
-	State = #state{proxy = Proxy,
-				   internal_state = erlide_ide_core:init()
-				  },
-	init(State).
+start_link(Port) ->
+	{ok, Proxy} = erlide_lsp_proxy:start_link([?SERVER, Port]),
+	gen_server:start_link({local, ?SERVER}, ?MODULE, Proxy, []).
 
 %% client API
 
@@ -62,22 +52,23 @@ publish_diagnostics(URI, Diagnostics) ->
 
 %%%%%%%%%%%%%%%%%%%%%
 
-init(State) ->
+init(Proxy) ->
 	process_flag(trap_exit, true),
-	receive
-		{'initialize', Id, ClientCapabilities} ->
-			{ServerCapabilities, NewState} = erlide_ide_core:initialize(State#state.internal_state, ClientCapabilities),
-			reply(State#state.proxy, Id, ServerCapabilities),
-			{ok, State#state{internal_state=NewState}}
-	after 5000 ->
-		{stop, timeout}
-	end.
+	State = #state{
+			proxy = Proxy,
+	  		internal_state = erlide_server_core:init()
+		},
+	{ok, State}.
 
 handle_call(Request, _From, State) ->
 	io:format("HUH???... ~p~n", [Request]),
 	Reply = {error, {unknown, Request}},
 	{reply, Reply, State}.
 
+handle_cast({'initialize', Id, ClientCapabilities}, State) ->
+	{ServerCapabilities, NewState} = erlide_server_core:initialize(State#state.internal_state, ClientCapabilities),
+	reply(State#state.proxy, Id, ServerCapabilities),
+	{noreply, State#state{internal_state=NewState}};
 handle_cast({'shutdown', _Id, _}, State) ->
 	{noreply, State#state{stopped = true}};
 handle_cast({'exit', _}, State) ->
@@ -88,27 +79,27 @@ handle_cast({'$/cancelRequest', #{id := Id}}, State) ->
 	{noreply, NewState};
 handle_cast({'workspace/didChangeConfiguration', #{settings := Settings}} , State) ->
 	TmpState = cancel_all_pending_reads(State),
-	NewState = erlide_ide_core:updated_configuration(TmpState#state.internal_state, Settings),
+	NewState = erlide_server_core:updated_configuration(TmpState#state.internal_state, Settings),
 	{noreply, TmpState#state{internal_state=NewState}};
 handle_cast({'workspace/didChangeWatchedFiles', #{changes := Changes}}, State) ->
 	TmpState = cancel_all_pending_reads(State),
-	NewState = erlide_ide_core:updated_watched_files(TmpState#state.internal_state, Changes),
+	NewState = erlide_server_core:updated_watched_files(TmpState#state.internal_state, Changes),
 	{noreply, TmpState#state{internal_state=NewState}};
 handle_cast({'textDocument/didOpen', #{textDocument := Document}}, State) ->
 	TmpState = cancel_all_pending_reads(State),
-	NewState = erlide_ide_core:opened_file(TmpState#state.internal_state, Document),	
+	NewState = erlide_server_core:opened_file(TmpState#state.internal_state, Document),	
 	{noreply, TmpState#state{internal_state=NewState}};
 handle_cast({'textDocument/didChange', #{textDocument := VersionedDocument, contentChanges := Changes}}, State) ->
 	TmpState = cancel_all_pending_reads(State),
-	NewState = erlide_ide_core:changed_file(TmpState#state.internal_state, VersionedDocument, Changes),
+	NewState = erlide_server_core:changed_file(TmpState#state.internal_state, VersionedDocument, Changes),
 	{noreply, TmpState#state{internal_state=NewState}};
 handle_cast({'textDocument/didSave', #{textDocument := DocumentId}}, State) ->
 	TmpState = cancel_all_pending_reads(State),
-	NewState = erlide_ide_core:saved_file(TmpState#state.internal_state, DocumentId),
+	NewState = erlide_server_core:saved_file(TmpState#state.internal_state, DocumentId),
 	{noreply, TmpState#state{internal_state=NewState}};
 handle_cast({'textDocument/didClose', #{textDocument := DocumentId}}, State) ->
 	TmpState = cancel_all_pending_reads(State),
-	NewState = erlide_ide_core:closed_file(TmpState#state.internal_state, DocumentId),
+	NewState = erlide_server_core:closed_file(TmpState#state.internal_state, DocumentId),
 	{noreply, TmpState#state{internal_state=NewState}};
 handle_cast({'workspace/symbol', Id, #{query:=Query}}, State = #state{pending_reads=Reqs}) ->
 	Pid = start_worker(Id, workspace_symbol, Query, State),
@@ -177,7 +168,7 @@ handle_cast({'textDocument/rename', Id, #{textDocument:=#{uri:=URI}, position:=P
 handle_cast({show_message, Type, Msg}, State = #state{proxy = Proxy}) ->
 	Proxy ! {notify, 'window/showMessage',
 			 #{type => Type,
-			   message => iolist_to_binary(Msg)}},
+			   message => unicode:characters_to_binary(Msg)}},
 	{noreply, State};
 handle_cast({show_message_request, Type, Msg, Actions, Pid}, State = #state{proxy = Proxy}) ->
 	Id = State#state.crt_id,
@@ -187,14 +178,14 @@ handle_cast({show_message_request, Type, Msg, Actions, Pid}, State = #state{prox
 						  },
 	Proxy ! {request, Id, 'window/showMessageRequest',
 			 #{type => Type,
-			   message => iolist_to_binary(Msg),
+			   message => unicode:characters_to_binary(Msg),
 			   actions => Actions}
 			},
 	{noreply, NewState};
 handle_cast({log_message, Type, Msg}, State = #state{proxy = Proxy}) ->
 	Proxy ! {notify, 'window/logMessage',
 			 #{type => Type,
-			   message => iolist_to_binary(Msg)}},
+			   message => unicode:characters_to_binary(Msg)}},
 	{noreply, State};
 handle_cast({telemetry_event, Msg}, State = #state{proxy = Proxy}) ->
 	Proxy ! {notify, 'telemetry/event', Msg},
@@ -218,7 +209,8 @@ handle_cast({_F, _A}=Other, State) ->
 	{noreply, State};
 handle_cast({F, Id, A}, State) ->
 	FN = atom_to_binary(F, latin1),
-	AN = iolist_to_binary(io_lib:format("~p~n", [A])),
+	AN = unicode:characters_to_binary(lists:flatten(io_lib:format("~p~n", [A]))),
+	io:format("Unrecognized operation ~p~n", [{FN, AN}]),
 	reply(State, Id, #{error => #{code => method_not_found,
 								  message => <<"Unrecognized method ", FN/binary,
 											   " called with ", AN/binary>>}}),
@@ -262,10 +254,10 @@ start_worker(Id, Method, Params, State) ->
 	spawn(fun() ->
 				  Fun = fun(Reporter) ->
 								Internal = State#state.internal_state,
-								erlide_ide_core:Method(Internal, Params, Reporter)
+								erlide_server_core:Method(Internal, Params, Reporter)
 						end,
 				  {ok, MonPid} = cancellable_worker:start(Fun),
-				  DfltAnswer = erlide_ide_core:default_answer(Method),
+				  DfltAnswer = erlide_server_core:default_answer(Method),
 				  my_worker_loop(Id, State, MonPid, DfltAnswer)
 		  end).
 
