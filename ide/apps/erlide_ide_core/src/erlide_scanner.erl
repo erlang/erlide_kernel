@@ -135,5 +135,5 @@ convert_tokens(Tokens) ->
                   G = case is_list(Txt) of true -> length(Txt); _ -> byte_size(Txt) end,
                   <<(kind_small(Kind)), L:24, O:24, G:24>>
           end,
-    unicode:characters_to_binary(lists:flatten([Fun(X) || X <- Tokens])).
+    list_to_binary(lists:flatten([Fun(X) || X <- Tokens])).
 
