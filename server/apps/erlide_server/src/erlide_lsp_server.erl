@@ -83,7 +83,7 @@ handle_cast({'workspace/didChangeConfiguration', #{settings := Settings}} , Stat
 	{noreply, TmpState#state{internal_state=NewState}};
 handle_cast({'workspace/didChangeWatchedFiles', #{changes := Changes}}, State) ->
 	TmpState = cancel_all_pending_reads(State),
-	NewState = erlide_server_core:updated_watched_files(TmpState#state.internal_state, Changes),
+	NewState = erlide_server_core:updated_watched_files(TmpState#state.internal_state, encode_file_changes(Changes)),
 	{noreply, TmpState#state{internal_state=NewState}};
 handle_cast({'textDocument/didOpen', #{textDocument := Document}}, State) ->
 	TmpState = cancel_all_pending_reads(State),
@@ -275,3 +275,14 @@ my_worker_loop(Id, State, MonPid, DfltAnswer) ->
 		end
 	end.
 
+
+encode_file_changes(Changes) ->
+	[encode_file_change(X) || X<-Changes].
+
+encode_file_change(#{type:=1}=Change) ->
+	Change#{type=>created};
+encode_file_change(#{type:=2}=Change) ->
+	Change#{type=>changed};
+encode_file_change(#{type:=3}=Change) ->
+	Change#{type=>deleted}.
+	

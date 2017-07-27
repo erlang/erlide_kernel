@@ -49,7 +49,7 @@ check(MonPid) when is_pid(MonPid) ->
 cancel(MonPid) when is_pid(MonPid) ->
 	case is_process_alive(MonPid) of
 		true ->
-			io:format("*** ~p~n", [{MonPid}]),
+			%% io:format("*** cancel worker ~p~n", [{MonPid}]),
 			catch gen_server:call(MonPid, cancel);
 		false ->
 			{error, noproc}

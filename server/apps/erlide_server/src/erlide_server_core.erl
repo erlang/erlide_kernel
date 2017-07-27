@@ -36,46 +36,48 @@
         configuration = #{},
         watched_files = [],
         open_files = []
-			   }).
+		}).
 
 init() ->
 	#state{}.
 
 initialize(State, ClientCapabilities) ->
 	Capabilities = #{
-        	 textDocumentSync => 1, %% 0=none, 1=full, 2=incremental
+        	 textDocumentSync => sync(full), 
         	 hoverProvider => true,
         	 completionProvider => #{
         			 resolveProvider => true,
-											 triggerCharacters => []
-											},
-					 signatureHelpProvider => #{
-												triggerCharacters => []
-											   },
-					 definitionProvider => true,
-					 referencesProvider => true,
-					 documentHighlightProvider => true,
-					 documentSymbolProvider => true,
-					 workspaceSymbolProvider => true,
-					 codeActionProvider => true,
-%% 					 codeLensProvider => #{
-%% 										   resolveProvider => true
-%% 										  },
-					 documentFormattingProvider => true,
-					 documentRangeFormattingProvider => true,
-%% 					 documentOnTypeFormattingProvider => #{
-%% 														   firstTriggerCharacter => <<"">>,
-%% 														   moreTriggerCharacters => []
-%% 														  },
-					 renameProvider => true
+					 triggerCharacters => [<<":">>, <<"?">>, <<"#">>]
 					},
+			signatureHelpProvider => #{
+									triggerCharacters => [<<"(">>]
+									},
+			definitionProvider => true,
+			referencesProvider => true,
+			documentHighlightProvider => true,
+			documentSymbolProvider => true,
+			workspaceSymbolProvider => true,
+			codeActionProvider => true,
+			codeLensProvider => #{
+								resolveProvider => true
+								},
+			documentFormattingProvider => true,
+			documentRangeFormattingProvider => true,
+			documentOnTypeFormattingProvider => #{
+												firstTriggerCharacter => <<"}">>,
+												moreTriggerCharacters => [<<"}">>,<<";">>,<<".">>]
+												},
+			renameProvider => true
+		},
 	Server = #{capabilities => Capabilities},
 	{Server, State#state{client_capabilities=ClientCapabilities, server_capabilities=Server}}.
 
 updated_configuration(State, Settings) ->
-	%% TODO start parsing & processing
+	#{erlang:=ErlSettings} = Settings,
+	%% io:format("cfg: ~p~n", [ErlSettings]),
+	%% TODO start parsing & processing 
 	%% TODO start compile
-	State#state{configuration=Settings}.
+	State#state{configuration=ErlSettings}.
 
 updated_watched_files(State, _Changes) ->
 	Watched = State#state.watched_files,
@@ -88,10 +90,12 @@ opened_file(State, #{uri:=URI, languageId:=_Language, version:=_Version, text:=_
 	NewOpen = [{URI, Item}|Open],
 	State#state{open_files=NewOpen}.
 
-changed_file(State, #{uri:=_URI, version:=_Version}, _Changes) ->
+changed_file(State, #{uri:=_URI, version:=_Version}, [#{text:=Text}]=_Changes) ->
+	io:format("CHANGE::~p -- ~p~n", [_URI, _Changes]),
 	%% TODO start parsing & processing
+	NewState = update_file(State, _URI, Text),
 	%% TODO start compile
-	State.
+	NewState.
 
 saved_file(State, #{uri:=_URI}) ->
 	State.
@@ -136,8 +140,14 @@ document_highlight(_State, _Args, Reporter) ->
 	Res = [],
 	Reporter(final, Res).
 
-document_symbol(_State, _Args, Reporter) ->
-	Res = [],
+document_symbol(State, URI, Reporter) ->
+	io:format("SYM:: ~p~n", [URI]),
+	Text = get_text(State, URI),
+	io:format("   :: ~p~n", [Text]),
+	{ok, _, _, Refs} = parse_file(URI, Text),
+	io:format("   :: ~p~n", [Refs]),
+	Res = convert_refs(Refs, URI),
+	io:format("   :: ~p~n", [Res]),
 	Reporter(final, Res).
 
 formatting(_State, _Args, Reporter) ->
@@ -251,3 +261,46 @@ default_answer(signature_help) ->
 	null;
 default_answer(_) ->
 	[].
+
+sync(none) ->
+	0;
+sync(full) ->
+	1;
+sync(incremental) ->
+	2.
+
+parse_file(File, Text) ->
+	case erlide_noparse:initial_parse(module, unicode:characters_to_list(File), unicode:characters_to_list(Text),".", false, false) of
+		{ok, {model, AST, _, Refs}} ->
+			io:format("AST::~p~n", [AST]),
+			io:format("REFS::~p~n", [Refs]),
+		{ok, AST, Refs};
+			Err ->
+				Err
+	end.
+
+convert_refs(Refs, URI) ->
+	[#{name=>Name, kind=>3, location=>#{uri=>URI, range=>#{start=>#{line=>I, char=>L}, 'end'=>#{line=>L, char=>N}}}} || 
+	
+	%{ref,{module_def,"test1"},0,15,module,-3,[],false}
+	
+	{ref,{K,Name},L,N,M,I,A,_} <- Refs].
+
+update_file(State=#state{open_files=Open}, URI, Text) ->
+	case lists:keytake(URI, 1, Open) of
+		{value, {URI, Entry}, Rest} -> 
+			NewEntry = Entry#{text=>Text},
+			NewOpen = [{URI, NewEntry}|Rest],
+			State#state{open_files=NewOpen};
+		false ->
+			State
+	end.
+
+get_text(State, URI) ->
+	{URI, #{text:=Text}} = lists:keyfind(URI, 1, State#state.open_files),
+	Text.
+
+str(A) when is_atom(A) ->
+	atom_to_list(A);
+str(S) ->
+	S.
