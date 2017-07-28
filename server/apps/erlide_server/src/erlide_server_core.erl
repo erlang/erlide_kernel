@@ -108,7 +108,7 @@ closed_file(State, #{uri:=URI}) ->
 workspace_symbol(_State, _Query, Reporter) ->
 	%% symbol = #{name, kind, location, containerName?}}
 	Res = [],
-	Reporter(final, Res).
+	Reporter({value, Res}).
 
 %% completion_item() :: label, kind?, detail?, documentation?, sortText?, filterText?,
 %% insertText?, textEdit? additionalTextEdits?, command? data?
@@ -118,11 +118,11 @@ completion(_State, {_DocumentId, _Position}, Reporter) ->
 	  isIncomplete => false,
 	  items => []
 	 },
-	Reporter(final, Res).
+	Reporter({value, Res}).
 
 completion_resolve(_State, Item, Reporter) ->
 	Res = Item,
-	Reporter(final, Res).
+	Reporter({value, Res}).
 
 hover(_State, {_DocumentId, _Position}, Reporter) ->
 	%% [markedstring()]:: String (=markdown), #{language, value}
@@ -130,41 +130,37 @@ hover(_State, {_DocumentId, _Position}, Reporter) ->
 	  contents => []
 	 %%, range => erlide_lsp_utils:range(_Position, _Position)
 	 },
-	Reporter(final, Res).
+	Reporter({value, Res}).
 
 references(_State, _Args, Reporter) ->
 	Res = [],
-	Reporter(final, Res).
+	Reporter({value, Res}).
 
 document_highlight(_State, _Args, Reporter) ->
 	Res = [],
-	Reporter(final, Res).
+	Reporter({value, Res}).
 
 document_symbol(State, URI, Reporter) ->
-	io:format("SYM:: ~p~n", [URI]),
 	Text = get_text(State, URI),
-	io:format("   :: ~p~n", [Text]),
-	{ok, _, _, Refs} = parse_file(URI, Text),
-	io:format("   :: ~p~n", [Refs]),
+	{ok, _, Refs} = parse_file(URI, Text),
 	Res = convert_refs(Refs, URI),
-	io:format("   :: ~p~n", [Res]),
-	Reporter(final, Res).
+	Reporter({value, Res}).
 
 formatting(_State, _Args, Reporter) ->
 	Res = [],
-	Reporter(final, Res).
+	Reporter({value, Res}).
 
 range_formatting(_State, _Args, Reporter) ->
 	Res = [],
-	Reporter(final, Res).
+	Reporter({value, Res}).
 
 on_type_formatting(_State, _Args, Reporter) ->
 	Res = [],
-	Reporter(final, Res).
+	Reporter({value, Res}).
 
 definition(_State, _Args, Reporter) ->
 	Res = [],
-	Reporter(final, Res).
+	Reporter({value, Res}).
 
 signature_help(_State, _Args, Reporter) ->
 	Res = #{
@@ -172,24 +168,24 @@ signature_help(_State, _Args, Reporter) ->
 	  activeSignature => null,
 	  activeParameter => null
 	  },
-	Reporter(final, Res).
+	Reporter({value, Res}).
 
 code_action(_State, {_URI, _Range, _Context}, Reporter) ->
 	Res = [],
-	Reporter(final, Res).
+	Reporter({value, Res}).
 
 code_lens(_State, _Args, Reporter) ->
 	Res = [],
-	Reporter(final, Res).
+	Reporter({value, Res}).
 
 code_lens_resolve(_State, Item, Reporter) ->
 		Res = Item,
-	Reporter(final, Res).
+	Reporter({value, Res}).
 
 rename(_State, _Args, Reporter) ->
 	%% #{URI: [edits]}
 	Res = #{changes => []},
-	Reporter(final, Res).
+	Reporter({value, Res}).
 
 
 %%%%%%%%%%%%%%%%%
@@ -271,20 +267,47 @@ sync(incremental) ->
 
 parse_file(File, Text) ->
 	case erlide_noparse:initial_parse(module, unicode:characters_to_list(File), unicode:characters_to_list(Text),".", false, false) of
-		{ok, {model, AST, _, Refs}} ->
-			io:format("AST::~p~n", [AST]),
-			io:format("REFS::~p~n", [Refs]),
-		{ok, AST, Refs};
-			Err ->
-				Err
+		{ok, {model, AST, _}, _, Refs} ->
+			{ok, AST, Refs};
+		Err ->
+			Err
 	end.
 
 convert_refs(Refs, URI) ->
-	[#{name=>Name, kind=>3, location=>#{uri=>URI, range=>#{start=>#{line=>I, char=>L}, 'end'=>#{line=>L, char=>N}}}} || 
+	%%io:format("REFS===~p~n----~n", [Refs]),
+	[
+		begin
+			#{
+			name=>print_name(Data), 
+			kind=>3, 
+			location=>#{
+				uri=>URI, 
+				range=>#{
+					start=>#{line=>1, character=>0}, 
+					'end'=>#{line=>1, character=>1}
+					}
+				}
+			}
+		end || 
 	
 	%{ref,{module_def,"test1"},0,15,module,-3,[],false}
 	
-	{ref,{K,Name},L,N,M,I,A,_} <- Refs].
+	{ref,Data,Offset,Length,_Function,_Arity,_Clause,_SubClause} <- Refs].
+
+print_name(Data) ->
+	{Kind, Name, Key} = case Data of 
+		{KK, NN} ->
+			{KK, NN, ''};
+		E ->
+			E
+	end,
+	case  Key of
+		'' ->	
+			iolist_to_binary(io_lib:format("~s", [Name]));
+		_ ->
+			iolist_to_binary(io_lib:format("~s:~w", [Name, Key]))
+	end.
+	
 
 update_file(State=#state{open_files=Open}, URI, Text) ->
 	case lists:keytake(URI, 1, Open) of
@@ -300,7 +323,3 @@ get_text(State, URI) ->
 	{URI, #{text:=Text}} = lists:keyfind(URI, 1, State#state.open_files),
 	Text.
 
-str(A) when is_atom(A) ->
-	atom_to_list(A);
-str(S) ->
-	S.
