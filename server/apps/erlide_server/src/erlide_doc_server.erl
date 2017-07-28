@@ -86,9 +86,5 @@ convert1(Config, Providers, [{M, D}|T], Result) ->
 traverse_test_() ->
 	[
 	 ?_assertEqual({ok, [[1,2]]},traverse(#{}, [fun lists:seq/2], [1,2])),
-	 ?_assertEqual({ok, []},traverse(#{}, [], [])),
-	 ?_assertEqual({ok, []},traverse(#{}, [], [])),
-	 ?_assertEqual({ok, []},traverse(#{}, [], [])),
-	 ?_assertEqual({ok, []},traverse(#{}, [], [])),
 	 ?_assertEqual({ok, []},traverse(#{}, [], []))
 	].

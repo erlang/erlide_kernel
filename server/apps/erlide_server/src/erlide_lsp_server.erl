@@ -7,7 +7,7 @@
 
 -export([
 		 start_link/1,
-		 
+
 		 show_message/2,
 		 show_message_request/3,
 		 log_message/2,
@@ -87,7 +87,7 @@ handle_cast({'workspace/didChangeWatchedFiles', #{changes := Changes}}, State) -
 	{noreply, TmpState#state{internal_state=NewState}};
 handle_cast({'textDocument/didOpen', #{textDocument := Document}}, State) ->
 	TmpState = cancel_all_pending_reads(State),
-	NewState = erlide_server_core:opened_file(TmpState#state.internal_state, Document),	
+	NewState = erlide_server_core:opened_file(TmpState#state.internal_state, Document),
 	{noreply, TmpState#state{internal_state=NewState}};
 handle_cast({'textDocument/didChange', #{textDocument := VersionedDocument, contentChanges := Changes}}, State) ->
 	TmpState = cancel_all_pending_reads(State),
@@ -240,41 +240,29 @@ reply(Proxy, Id, Answer, _DefaultAnswer) ->
 cancel_read(Id, #state{pending_reads=Reqs}=State) ->
 	case lists:keytake(Id, 1, Reqs) of
 		{value, {Id, Pid}, NewReqs} ->
-			Pid ! cancel,
+			cancellable_worker:cancel(Pid),
 			State#state{pending_reads=NewReqs};
 		false ->
 			State
 	end.
 
 cancel_all_pending_reads(#state{pending_reads=Reqs}=State) ->
-	[cancel_read(X, State) || {X, _} <- Reqs],
+	[cancellable_worker:cancel(Pid) || {_, Pid} <- Reqs],
 	State#state{pending_reads=[]}.
 
 start_worker(Id, Method, Params, State) ->
-	spawn(fun() ->
-				  Fun = fun(Reporter) ->
-								Internal = State#state.internal_state,
-								erlide_server_core:Method(Internal, Params, Reporter)
-						end,
-				  {ok, MonPid} = cancellable_worker:start(Fun),
-				  DfltAnswer = erlide_server_core:default_answer(Method),
-				  my_worker_loop(Id, State, MonPid, DfltAnswer)
-		  end).
-
-my_worker_loop(Id, State, MonPid, DfltAnswer) ->
-	receive
-		cancel ->
-			{_, Result} = cancellable_worker:cancel(MonPid),
-			reply(State#state.proxy, Id, Result, DfltAnswer)
-	after 10 ->
-		case cancellable_worker:check(MonPid) of
-			{partial, _} ->
-				my_worker_loop(Id, State, MonPid, DfltAnswer);
-			{final, Result} ->
-				reply(State#state.proxy, Id, Result)
-		end
-	end.
-
+	Internal = State#state.internal_state,
+	Work = fun(Reporter) ->
+			erlide_server_core:Method(Internal, Params, Reporter)
+		end,
+	Proxy = State#state.proxy,
+	Replier = fun(nothing) ->
+				Proxy ! {reply, Id, erlide_server_core:default_answer(Method)};
+			({ok, Answer}) ->
+				Proxy ! {reply, Id, Answer}
+		end,
+	{ok, Pid} = cancellable_worker:start(Work, Replier),
+	Pid.
 
 encode_file_changes(Changes) ->
 	[encode_file_change(X) || X<-Changes].
@@ -285,4 +273,3 @@ encode_file_change(#{type:=2}=Change) ->
 	Change#{type=>changed};
 encode_file_change(#{type:=3}=Change) ->
 	Change#{type=>deleted}.
-	
