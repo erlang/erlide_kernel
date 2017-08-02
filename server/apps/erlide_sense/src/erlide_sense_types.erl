@@ -8,7 +8,7 @@
 %%%  Contributors:
 %%%      Vlad Dumitrescu
 %%% ******************************************************************************/
--module(erlide_db).
+-module(erlide_sense_types).
 
 -export([
 		 definition/2,

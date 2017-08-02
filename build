@@ -37,8 +37,11 @@ main() {
         "test")
             cmds="do eunit -c -v, cover -v"
             ;;
-        "verify")
-            cmds="do xref, dialyzer"
+        "xref")
+            cmds="do xref"
+            ;;
+        "dialyzer")
+            cmds="do dialyzer"
             ;;
     esac
 

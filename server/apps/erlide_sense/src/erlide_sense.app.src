@@ -1,0 +1,9 @@
+{application, erlide_sense,
+  [
+   {vsn, "0.2.0"},
+   {erlide_context, ide},
+   {registered,   []},
+   {applications, [kernel, stdlib, erlide_common, erlide_ide_core, jsx, getopt]},
+   {env,          []}
+   ]}
+.

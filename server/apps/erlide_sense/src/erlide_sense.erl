@@ -1,4 +1,4 @@
--module(erlide_server_core).
+-module(erlide_sense).
 
 -export([
         init/0,

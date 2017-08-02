@@ -52,13 +52,13 @@ publish_diagnostics(URI, Diagnostics) ->
 init([]) ->
 	process_flag(trap_exit, true),
 	State = #state{
-	  		internal_state = erlide_server_core:init()
+	  		internal_state = erlide_sense:init()
 		},
 	{ok, State}.
 
 handle_call({'initialize', Id, ClientCapabilities}, 
 			_From, State) ->
-	{ServerCapabilities, NewState} = erlide_server_core:initialize(State#state.internal_state, ClientCapabilities),
+	{ServerCapabilities, NewState} = erlide_sense:initialize(State#state.internal_state, ClientCapabilities),
 	reply(Id, ServerCapabilities),
 	{reply, ok, State#state{internal_state=NewState}};
 handle_call({'workspace/symbol', Id, #{query:=Query}},
@@ -156,22 +156,22 @@ handle_cast({'$/cancelRequest', #{id := Id}}, State) ->
 	NewState = cancel_request(Id, State),
 	{noreply, NewState};
 handle_cast({'workspace/didChangeConfiguration', #{settings := Settings}} , State) ->
-	NewState = erlide_server_core:updated_configuration(State#state.internal_state, Settings),
+	NewState = erlide_sense:updated_configuration(State#state.internal_state, Settings),
 	{noreply, State#state{internal_state=NewState}};
 handle_cast({'workspace/didChangeWatchedFiles', #{changes := Changes}}, State) ->
-	NewState = erlide_server_core:updated_watched_files(State#state.internal_state, encode_file_changes(Changes)),
+	NewState = erlide_sense:updated_watched_files(State#state.internal_state, encode_file_changes(Changes)),
 	{noreply, State#state{internal_state=NewState}};
 handle_cast({'textDocument/didOpen', #{textDocument := Document}}, State) ->
-	NewState = erlide_server_core:opened_file(State#state.internal_state, Document),
+	NewState = erlide_sense:opened_file(State#state.internal_state, Document),
 	{noreply, State#state{internal_state=NewState}};
 handle_cast({'textDocument/didChange', #{textDocument := VersionedDocument, contentChanges := Changes}}, State) ->
-	NewState = erlide_server_core:changed_file(State#state.internal_state, VersionedDocument, Changes),
+	NewState = erlide_sense:changed_file(State#state.internal_state, VersionedDocument, Changes),
 	{noreply, State#state{internal_state=NewState}};
 handle_cast({'textDocument/didSave', #{textDocument := DocumentId}}, State) ->
-	NewState = erlide_server_core:saved_file(State#state.internal_state, DocumentId),
+	NewState = erlide_sense:saved_file(State#state.internal_state, DocumentId),
 	{noreply, State#state{internal_state=NewState}};
 handle_cast({'textDocument/didClose', #{textDocument := DocumentId}}, State) ->
-	NewState = erlide_server_core:closed_file(State#state.internal_state, DocumentId),
+	NewState = erlide_sense:closed_file(State#state.internal_state, DocumentId),
 	{noreply, State#state{internal_state=NewState}};
 handle_cast({show_message, Type, Msg}, State) ->
 	erlide_lsp_connection ! {notify, 'window/showMessage',
@@ -253,10 +253,10 @@ cancel_request(Id, #state{pending_in_requests=Reqs}=State) ->
 start_worker(Id, Method, Params, State) ->
 	Internal = State#state.internal_state,
 	Work = fun(Reporter) ->
-			erlide_server_core:Method(Internal, Params, Reporter)
+			erlide_sense:Method(Internal, Params, Reporter)
 		end,
 	Replier = fun({_, nothing}) ->
-				reply(Id, erlide_server_core:default_answer(Method));
+				reply(Id, erlide_sense:default_answer(Method));
 			({_, Answer}) ->
 				reply(Id, Answer)
 		end,
