@@ -52,8 +52,6 @@ main() {
     ./build $cmds
     cd ../ide
     ./build $cmds
-    cd ../server
-    ./build $cmds
     if [ "$arg" == "compile" ] ; then
         ./build escriptize
     fi
