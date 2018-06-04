@@ -37,8 +37,11 @@ main() {
         "test")
             cmds="do eunit -c -v, cover -v"
             ;;
-        "verify")
-            cmds="do xref, dialyzer"
+        "xref")
+            cmds="do xref"
+            ;;
+        "dialyzer")
+            cmds="do dialyzer"
             ;;
     esac
 
@@ -48,8 +51,6 @@ main() {
     cd ../debugger
     ./build $cmds
     cd ../ide
-    ./build $cmds
-    cd ../server
     ./build $cmds
     if [ "$arg" == "compile" ] ; then
         ./build escriptize

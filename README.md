@@ -1,6 +1,5 @@
-Generic Erlang engine for source code indexing and manipulation, that can be used by code editors and IDES to provide advanced functionality.
+Generic Erlang engine for source code indexing and manipulation, that can be used by code editors and IDES to provide advanced functionality. This functionality will be accessible via VSCode's [Language Server Protocol](https://github.com/Microsoft/language-server-protocol) and [Debug Protocol](https://code.visualstudio.com/docs/extensionAPI/api-debugging), possibly with some extensions. The `server` application is the endpoint.
 
-Different IDEs implement clients that use this kernel to do the real work. Currently, only an Eclipse client is implemented (see the [erlide_eclipse](https://github.com/erlang/erlide_eclipse) repository).
 
 # Important note
 
@@ -24,10 +23,7 @@ The erlide kernel will implement the core functionality of an IDE:
 - launch the projects' code and interact with it (debug, trace, profile)
 - launch, examine and interact with Erlang nodes
 
-The API will be accessible via the network, using serialized Erlang terms, but in the future a REST API could be useful (for clients that don't talk Erlang). [Detailed API description](API.md). Parts of the API will be asynchronous, so that progress information and partial results can be returned to the client when available; these parts will be marked as such.
-
-The API is meant to be generic i.e. without Eclipse-related leaky abstractions, but we might borrow some of the concepts (like for example, the workspace as a container for several projects).
-
 ## Notes
 
-* The OTP version specified in the rebar.config files for each subproject MUST be used for compilation.
+* The OTP version specified in the rebar.config files for each subproject MUST be used for compilation. The `build` script installs those using `kerl` in `~/erlide_tools` (in the future the location should be configurable).
+* As transport for the communication protocols we will implement TCP and stdio, but others are possible.

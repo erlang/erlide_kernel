@@ -47,15 +47,6 @@ pipeline {
 				}
 			}
 		}
-
-		stage('Server') {
-			steps{
-				script {
-                    buildServer()
-                    publishServer()
-				}
-			}
-		}
 	}
 	//post {
 		//always {
@@ -120,11 +111,6 @@ def analyze2() {
 def buildEclipse() {
     sh "cd eclipse && ./build && cd .."
     step([$class: 'ArtifactArchiver', artifacts: "eclipse/org.erlide.kernel.site-*.zip", fingerprint: true])
-}
-
-def buildServer() {
-    sh "cd server && ./build escriptize && cd .."
-    step([$class: 'ArtifactArchiver', artifacts: "server/_build/default/bin/erlide_server", fingerprint: true])
 }
 
 @NonCPS
