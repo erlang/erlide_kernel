@@ -27,8 +27,10 @@ record_ref_within_type_spec_test_() ->
 
 record_field_ref_test_() ->
     S = "f() -> #record{a=ok}, #record.a.",
-    Expected = [{"xxx",f,0,[],false,30,1,false},
-                {"xxx", f, 0, [], false, 15, 1, false}],
+    Expected = [
+        {"xxx", f, 0, [], false, 30, 1, false},
+        {"xxx", f, 0, [], false, 15, 1, false}
+    ],
     Value = test_refs(S, {record_field_ref, record, a}),
     [?_assertEqual(Expected, Value)].
 
@@ -40,8 +42,10 @@ external_call_after_record_dot_field_test_() ->
 
 local_call_in_record_test_() ->
     S = "a() ->\n    y(),\n    A#b{x = y()}.\n",
-    Expected = [{"xxx", a, 0, [], false, 11, 1, false},
-                {"xxx", a, 0, [], false, 28, 1, false}],
+    Expected = [
+        {"xxx", a, 0, [], false, 11, 1, false},
+        {"xxx", a, 0, [], false, 28, 1, false}
+    ],
     Value = test_refs(S, {external_call, xxx, y, 0}),
     [?_assertEqual(Expected, Value)].
 
@@ -51,16 +55,17 @@ external_call_after_empty_record_test_() ->
     Value1 = test_refs(S, {external_call, a, f, 0}),
     Expected2 = [{"xxx", f, 0, [], false, 11, 2, false}],
     Value2 = test_refs(S, {record_ref, x}),
-    [?_assertEqual(Expected1, Value1),
-     ?_assertEqual(Expected2, Value2)].
+    [
+        ?_assertEqual(Expected1, Value1),
+        ?_assertEqual(Expected2, Value2)
+    ].
 
 find_second_field_in_record_match_test_() ->
     %% http://www.assembla.com/spaces/erlide/tickets/1268-searching---can-t-find-fields-in-record-match---construction
     S = "x(A, B) ->\n    #r{field1=A, field2=B}.",
     Value = test_refs(S, {record_field_ref, r, field2}),
-    Expected = [{"xxx",x,2,"(A, B)",false,28,6,false}],
+    Expected = [{"xxx", x, 2, "(A, B)", false, 28, 6, false}],
     [?_assertEqual(Expected, Value)].
-
 
 %%
 %% Local Functions

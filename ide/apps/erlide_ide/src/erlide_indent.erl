@@ -12,10 +12,10 @@
 %%
 
 -export([
-         indent_line/7,
-         indent_lines/7,
-         template_indent_lines/6
-        ]).
+    indent_line/7,
+    indent_lines/7,
+    template_indent_lines/6
+]).
 
 %% -define(IO_FORMAT_DEBUG, 1).
 %% -define(DEBUG, 1).
@@ -25,22 +25,24 @@
 
 %% TODO change into multiples of IndentW
 default_indent_prefs() ->
-    [{before_binary_op, 4},
-     {after_binary_op, 4},
-     {before_arrow, 2},
-     {after_arrow, 4},
-     {after_unary_op, 4},
-     {clause, 4},
-     {'case', 4},
-     {'try', 4},
-     {'catch', 4},
-     {'after', 4},
-     {function_parameters, 2},
-     {'fun', 3},
-     {fun_body, 5},
-     {paren, 1},
-     {'<<', 2},
-     {end_paren, 0}].
+    [
+        {before_binary_op, 4},
+        {after_binary_op, 4},
+        {before_arrow, 2},
+        {after_arrow, 4},
+        {after_unary_op, 4},
+        {clause, 4},
+        {'case', 4},
+        {'try', 4},
+        {'catch', 4},
+        {'after', 4},
+        {function_parameters, 2},
+        {'fun', 3},
+        {fun_body, 5},
+        {paren, 1},
+        {'<<', 2},
+        {end_paren, 0}
+    ].
 
 %%
 %% API Functions
@@ -58,14 +60,16 @@ indent_line(St, OldLine, CommandText, N, _IndentW, Tablength, UseTabs, Prefs) ->
             case scan(S ++ StrippedCommandText) of
                 {ok, T} ->
                     LineOffsets = erlide_text:get_line_offsets(S),
-                    Tr = T ++
-                             [#token{kind=eof, line=size(LineOffsets)+1}],
-                    LineN = case N of
-                                -1 ->
-                                    size(LineOffsets)+1;
-                                _ ->
-                                    N
-                            end,
+                    Tr =
+                        T ++
+                            [#token{kind = eof, line = size(LineOffsets) + 1}],
+                    LineN =
+                        case N of
+                            -1 ->
+                                size(LineOffsets) + 1;
+                            _ ->
+                                N
+                        end,
                     ?D({indent_line, OldLine}),
                     case indent(Tr, LineOffsets, LineN, Prefs, erlide_text:left_strip(OldLine)) of
                         {I, true} ->
@@ -78,12 +82,13 @@ indent_line(St, OldLine, CommandText, N, _IndentW, Tablength, UseTabs, Prefs) ->
                             case AddNL of
                                 false ->
                                     IS0 = reindent_line("", I),
-                                    IS =  entab(IS0, UseTabs, Tablength),
+                                    IS = entab(IS0, UseTabs, Tablength),
                                     {IS, 0, false};
-                                true -> {"", 0, false}
+                                true ->
+                                    {"", 0, false}
                             end
                     end;
-                Error  ->
+                Error ->
                     Error
             end;
         false ->
@@ -129,8 +134,14 @@ get_prefs(Prefs) ->
 %% TODO value 4 is hardcoded! Should use indentation width here
 
 indent(Tokens, LineOffsets, LineN, Prefs, OldLine) ->
-    I = #i{anchor=hd(Tokens), indent_line=LineN, current=0, prefs=Prefs,
-           in_block=true, old_line=OldLine},
+    I = #i{
+        anchor = hd(Tokens),
+        indent_line = LineN,
+        current = 0,
+        prefs = Prefs,
+        in_block = true,
+        old_line = OldLine
+    },
     try
         i_form_list(Tokens, I),
         ?D(no_catch),
@@ -150,26 +161,28 @@ indent(Tokens, LineOffsets, LineN, Prefs, OldLine) ->
             {0, true}
     end.
 
-get_indent_of(_A = #token{kind=eof}, C, _LineOffsets) ->
+get_indent_of(_A = #token{kind = eof}, C, _LineOffsets) ->
     C;
-get_indent_of(_A = #token{line=N, offset=O}, C, LineOffsets) ->
-    LO = element(N+1, LineOffsets),
+get_indent_of(_A = #token{line = N, offset = O}, C, LineOffsets) ->
+    LO = element(N + 1, LineOffsets),
     TI = O - LO,
     ?D({O, LO, C, _A}),
-    TI+C.
+    TI + C.
 
 indent_lines(S, From, Length, IndentW, Tablength, UseTabs, Prefs) ->
     {First, FirstLineNum, Lines} = erlide_text:get_text_and_lines(S, From, Length),
     do_indent_lines(Lines, IndentW, Tablength, UseTabs, First, get_prefs(Prefs), FirstLineNum, "").
 
 template_indent_lines(Prefix, S, IndentW, Tablength, UseTabs, Prefs) ->
-    S0 = Prefix++S,
+    S0 = Prefix ++ S,
     S1 = quote_template_variables(S0),
     From = length(Prefix),
     Length = length(S1) - From,
     {First, FirstLineNum, Lines} = erlide_text:get_text_and_lines(S1, From, Length),
-    S2 = do_indent_lines(Lines, IndentW, Tablength, UseTabs, First, get_prefs(Prefs), FirstLineNum, ""),
-    S3 = string:substr(S2, length(Prefix)+1, length(S2)-1),
+    S2 = do_indent_lines(
+        Lines, IndentW, Tablength, UseTabs, First, get_prefs(Prefs), FirstLineNum, ""
+    ),
+    S3 = string:substr(S2, length(Prefix) + 1, length(S2) - 1),
     unquote_template_variables(S3).
 
 %%
@@ -179,25 +192,29 @@ template_indent_lines(Prefix, S, IndentW, Tablength, UseTabs, Prefs) ->
 do_indent_lines([], _, _, _, _, _, _, A) ->
     A;
 do_indent_lines([Line | Rest], IndentW, Tablength, UseTabs, Text, Prefs, N, Acc) ->
-    {NewI, _OldI, _AddNL} = indent_line(Text ++ Line, Line, "", N, IndentW, Tablength, UseTabs, Prefs),
-    ?D({do_indent_lines, Text++Line, NewI, N}),
-    NewLine = case NewI of
-                  error ->
-                      Line;
-                  _ ->
-                      NewLine0 = reindent_line(Line, NewI),
-                      entab(NewLine0, UseTabs, Tablength)
-              end,
-    do_indent_lines(Rest, IndentW, Tablength, UseTabs, Text ++ NewLine, Prefs, N+1, Acc++NewLine).
-
+    {NewI, _OldI, _AddNL} = indent_line(
+        Text ++ Line, Line, "", N, IndentW, Tablength, UseTabs, Prefs
+    ),
+    ?D({do_indent_lines, Text ++ Line, NewI, N}),
+    NewLine =
+        case NewI of
+            error ->
+                Line;
+            _ ->
+                NewLine0 = reindent_line(Line, NewI),
+                entab(NewLine0, UseTabs, Tablength)
+        end,
+    do_indent_lines(
+        Rest, IndentW, Tablength, UseTabs, Text ++ NewLine, Prefs, N + 1, Acc ++ NewLine
+    ).
 
 %%
 reindent_line(" " ++ S, I) ->
     reindent_line(S, I);
 reindent_line("\t" ++ S, I) ->
     reindent_line(S, I);
-reindent_line(S, I) when is_integer(I), I>0 ->
-    lists:duplicate(I, $ )++S;
+reindent_line(S, I) when is_integer(I), I > 0 ->
+    lists:duplicate(I, $\s) ++ S;
 reindent_line(S, I) when is_integer(I) ->
     S;
 reindent_line(S, I) when is_list(I) ->
@@ -205,11 +222,13 @@ reindent_line(S, I) when is_list(I) ->
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-i_check_aux([#token{line=K} | _], #i{indent_line=L, anchor=A, current=C, in_block=Inblock}) when K >= L ->
+i_check_aux([#token{line = K} | _], #i{indent_line = L, anchor = A, current = C, in_block = Inblock}) when
+    K >= L
+->
     {indent, A, C, Inblock};
-i_check_aux([eof | _], #i{anchor=A, current=C, in_block=Inblock}) ->
+i_check_aux([eof | _], #i{anchor = A, current = C, in_block = Inblock}) ->
     {indent_eof, A, C, Inblock};
-i_check_aux([#token{kind=eof} | _], #i{anchor=A, current=C, in_block=Inblock}) ->
+i_check_aux([#token{kind = eof} | _], #i{anchor = A, current = C, in_block = Inblock}) ->
     {indent_eof, A, C, Inblock};
 i_check_aux([], I) ->
     i_check_aux([eof], I);
@@ -232,10 +251,10 @@ head([H | _]) -> H;
 head(H) -> H.
 
 i_with(W, I) ->
-    I#i{current=indent_by(W, I#i.prefs)}.
+    I#i{current = indent_by(W, I#i.prefs)}.
 
 i_with(W, A, I) ->
-    I#i{current=indent_by(W, I#i.prefs), anchor=head(A)}.
+    I#i{current = indent_by(W, I#i.prefs), anchor = head(A)}.
 
 i_with_old_or_new_anchor(none, ANew, I) ->
     i_with(none, ANew, I);
@@ -243,7 +262,7 @@ i_with_old_or_new_anchor(AOld, _ANew, I) ->
     i_with(none, AOld, I).
 
 i_par_list(R0, I0) ->
-    I1 = I0#i{in_block=false},
+    I1 = I0#i{in_block = false},
     R1 = i_kind('(', R0, I1),
     I2 = i_with(end_paren, R0, I1),
     R2 = i_parameters(R1, I1),
@@ -277,37 +296,45 @@ i_expr(R0, I0, A) ->
 
 i_expr_rest(R0, I, A) ->
     case i_sniff(R0) of
-        '(' -> % function call
+        % function call
+        '(' ->
             I1 = i_with(function_parameters, A, I),
             R1 = i_par_list(R0, I1),
             i_expr_rest(R1, I1, A);
         eof ->
             {R0, A};
-        '#' -> % record something
+        % record something
+        '#' ->
             ?D(I),
             i_record(R0, I);
-        ':' -> % external function call
+        % external function call
+        ':' ->
             R1 = i_kind(':', R0, I),
             R2 = i_1_expr(R1, I),
             {R3, A1} = i_expr_rest(R2, I, A),
             {R3, A1};
-        '||' -> % list comprehension
+        % list comprehension
+        '||' ->
             R1 = i_kind('||', R0, I),
             R2 = i_expr_list(R1, I),
             {R2, A};
-        '<=' -> % within binary comprehension
+        % within binary comprehension
+        '<=' ->
             R1 = i_kind('<=', R0, I),
             {R2, _A} = i_expr(R1, i_with(after_binary_op, I), none),
             {R2, A};
-        '=' -> % match/assignment
+        % match/assignment
+        '=' ->
             R1 = i_binary_op(R0, i_with(before_binary_op, I)),
             {R2, _A} = i_expr(R1, i_with(after_binary_op, I), none),
             {R2, A};
-        '=>' -> % maps
+        % maps
+        '=>' ->
             R1 = i_binary_op(R0, i_with(before_binary_op, I)),
             {R2, _A} = i_expr(R1, i_with(after_binary_op, I), none),
             {R2, A};
-        ':=' -> % maps
+        % maps
+        ':=' ->
             R1 = i_binary_op(R0, i_with(before_binary_op, I)),
             {R2, _A} = i_expr(R1, i_with(after_binary_op, I), none),
             {R2, A};
@@ -357,7 +384,7 @@ i_binary_expr_list(R0, I0, A0) ->
                 ',' ->
                     R3 = i_kind(',', R2, I1),
                     i_binary_expr_list(R3, I1, I1#i.anchor);
-                Kind when Kind=:='||'; Kind=:='<='; Kind=:='<-' ->
+                Kind when Kind =:= '||'; Kind =:= '<='; Kind =:= '<-' ->
                     % binary comprehension
                     R3 = i_kind('||', R2, I1),
                     i_binary_expr_list(R3, I1, I1#i.anchor);
@@ -370,20 +397,21 @@ i_binary_expr(R0, I0) ->
     {R1, A1} = i_binary_sub_expr(R0, I0),
     I1 = i_with(none, A1, I0),
     ?D(head(R1)),
-    R2 = case i_sniff(R1) of
-             Kind when Kind==':'; Kind=='/' ->
-                 R11 = i_kind(Kind, R1, I1),
-                 i_binary_specifiers(R11, I1);
-             _ ->
-                 R1
-         end,
+    R2 =
+        case i_sniff(R1) of
+            Kind when Kind == ':'; Kind == '/' ->
+                R11 = i_kind(Kind, R1, I1),
+                i_binary_specifiers(R11, I1);
+            _ ->
+                R1
+        end,
     {R2, A1}.
 
 i_binary_sub_expr(R0, I0) ->
     case i_sniff(R0) of
-        Kind when Kind=='('; Kind=='<<'; Kind==macro ->
+        Kind when Kind == '('; Kind == '<<'; Kind == macro ->
             i_expr(R0, I0, none);
-        Kind when Kind==var; Kind==string; Kind==integer; Kind==char ->
+        Kind when Kind == var; Kind == string; Kind == integer; Kind == char ->
             R1 = i_comments(R0, I0),
             R2 = i_kind(Kind, R1, I0),
             {i_1_expr(R2, I0), hd(R1)}
@@ -393,7 +421,7 @@ i_binary_specifiers(R0, I) ->
     R1 = i_binary_specifier(R0, I),
     ?D(R1),
     case i_sniff(R1) of
-        Kind when Kind==':'; Kind=='-'; Kind=='/' ->
+        Kind when Kind == ':'; Kind == '-'; Kind == '/' ->
             R2 = i_kind(Kind, R1, I),
             i_binary_specifiers(R2, I);
         _ ->
@@ -406,7 +434,7 @@ i_binary_specifier(R0, I) ->
         '(' ->
             {R1, _A} = i_expr(R0, I, none),
             R1;
-        Kind when Kind==var; Kind==string; Kind==integer; Kind==atom; Kind==char ->
+        Kind when Kind == var; Kind == string; Kind == integer; Kind == atom; Kind == char ->
             R1 = i_comments(R0, I),
             R2 = i_kind(Kind, R1, I),
             i_1_expr(R2, I)
@@ -420,7 +448,7 @@ i_predicate_list(R0, I0, A0) ->
     {R2, A1} = i_expr(R1, I0, A0),
     I1 = i_with_old_or_new_anchor(A0, A1, I0),
     case i_sniff(R2) of
-        Kind when Kind==','; Kind==';' ->
+        Kind when Kind == ','; Kind == ';' ->
             R3 = i_kind(Kind, R2, I1),
             i_predicate_list(R3, I1, I1#i.anchor);
         _ ->
@@ -433,7 +461,7 @@ i_binary_op(R0, I) ->
 i_end_paren_or_expr_list(R, I0) ->
     i_check(R, I0),
     case i_sniff(R) of
-        Kind when Kind=='}'; Kind==']'; Kind==')' ->
+        Kind when Kind == '}'; Kind == ']'; Kind == ')' ->
             R;
         _ ->
             I1 = i_with(none, R, I0),
@@ -450,54 +478,54 @@ i_end_or_expr_list(R, I0) ->
             i_expr_list(R, I1)
     end.
 
-i_1_expr([#token{kind=atom} | _] = R, I) ->
+i_1_expr([#token{kind = atom} | _] = R, I) ->
     i_one(R, I);
-i_1_expr([#token{kind=integer}, #token{kind=dot} | _] = R, I) ->
+i_1_expr([#token{kind = integer}, #token{kind = dot} | _] = R, I) ->
     i_two(R, I);
-i_1_expr([#token{kind=integer} | _] = R, I) ->
+i_1_expr([#token{kind = integer} | _] = R, I) ->
     i_one(R, I);
-i_1_expr([#token{kind=string} | _] = R, I) ->
+i_1_expr([#token{kind = string} | _] = R, I) ->
     i_one(R, I);
-i_1_expr([#token{kind=macro} | _] = R, I) ->
+i_1_expr([#token{kind = macro} | _] = R, I) ->
     i_macro(R, I);
-i_1_expr([#token{kind=float} | _] = R, I) ->
+i_1_expr([#token{kind = float} | _] = R, I) ->
     i_one(R, I);
-i_1_expr([#token{kind=var} | _] = R, I) ->
+i_1_expr([#token{kind = var} | _] = R, I) ->
     i_one(R, I);
-i_1_expr([#token{kind=char} | _] = R, I) ->
+i_1_expr([#token{kind = char} | _] = R, I) ->
     i_one(R, I);
-i_1_expr([#token{kind=Kind} | _] = R0, I0) when Kind=='{'; Kind=='['; Kind=='(' ->
+i_1_expr([#token{kind = Kind} | _] = R0, I0) when Kind == '{'; Kind == '['; Kind == '(' ->
     R1 = i_kind(Kind, R0, I0),
     I1 = i_with(paren, R0, I0),
-    R2 = i_end_paren_or_expr_list(R1, I1#i{in_block=false}),
+    R2 = i_end_paren_or_expr_list(R1, I1#i{in_block = false}),
     I2 = i_with(end_paren, R0, I0),
     i_end_paren(R2, I2);
-i_1_expr([#token{kind='<<'} | _] = R0, I0) ->
+i_1_expr([#token{kind = '<<'} | _] = R0, I0) ->
     R1 = i_kind('<<', R0, I0),
     I1 = i_with('<<', R0, I0),
-    R2 = i_binary_expr_list(R1, I1#i{in_block=false}),
+    R2 = i_binary_expr_list(R1, I1#i{in_block = false}),
     I2 = i_with(end_paren, R0, I0),
     i_kind('>>', R2, I2);
-i_1_expr([#token{kind='#'} | _] = L, I) ->
+i_1_expr([#token{kind = '#'} | _] = L, I) ->
     ?D('#'),
-    {R, _A} = i_record(L, I#i{in_block=false}),
+    {R, _A} = i_record(L, I#i{in_block = false}),
     R;
-i_1_expr([#token{kind='case'} | _] = R, I) ->
+i_1_expr([#token{kind = 'case'} | _] = R, I) ->
     i_case(R, I);
-i_1_expr([#token{kind='if'} | _] = R, I) ->
+i_1_expr([#token{kind = 'if'} | _] = R, I) ->
     i_if(R, I);
-i_1_expr([#token{kind='begin'} | _] = R0, I0) ->
+i_1_expr([#token{kind = 'begin'} | _] = R0, I0) ->
     R1 = i_kind('begin', R0, I0),
     I1 = i_with('case', R0, I0),
-    R2 = i_end_or_expr_list(R1, I1#i{in_block=false}),
+    R2 = i_end_or_expr_list(R1, I1#i{in_block = false}),
     i_block_end('begin', R0, R2, I0);
 %%     R1 = i_kind('begin', R0, I0),
 %%     I1 = i_with('case', R0, I0),
 %%     R2 = i_end_or_expr_list(R1, I1#i{in_block=false}),
 %%     i_block_end(T#token.kind, R2, I0);
-i_1_expr([#token{kind='receive'} | _] = R, I) ->
+i_1_expr([#token{kind = 'receive'} | _] = R, I) ->
     i_receive(R, I);
-i_1_expr([#token{kind='fun'}=T | R0], I) ->
+i_1_expr([#token{kind = 'fun'} = T | R0], I) ->
     I1 = i_with('fun', T, I),
     case i_sniff(R0) of
         '(' ->
@@ -506,7 +534,7 @@ i_1_expr([#token{kind='fun'}=T | R0], I) ->
         var ->
             case i_sniff(tl(R0)) of
                 '(' ->
-                    R1 = i_fun_clause_list(R0, I1#i{current=I1#i.current+1}),
+                    R1 = i_fun_clause_list(R0, I1#i{current = I1#i.current + 1}),
                     i_kind('end', R1, I);
                 _ ->
                     {R1, _A} = i_expr(R0, I1, none),
@@ -516,7 +544,7 @@ i_1_expr([#token{kind='fun'}=T | R0], I) ->
             {R1, _A} = i_expr(R0, I1, none),
             R1
     end;
-i_1_expr([#token{kind='try'} | _] = R, I) ->
+i_1_expr([#token{kind = 'try'} | _] = R, I) ->
     ?D(R),
     i_try(R, I);
 i_1_expr(R0, I) ->
@@ -535,13 +563,24 @@ i_macro(R0, I) ->
 
 i_macro_rest(R0, I) ->
     case i_sniff(R0) of
-        Paren when Paren=:='('; Paren=:='{'; Paren=:='[' ->
+        Paren when Paren =:= '('; Paren =:= '{'; Paren =:= '[' ->
             R1 = i_kind(Paren, R0, I),
             R2 = i_parameters(R1, I),
             R3 = i_end_paren(R2, I),
             i_macro_rest(R3, I);
-        K when K=:=':'; K=:=','; K=:=';'; K=:=')'; K=:='}'; K=:=']'; K=:='>>'; K=:='of';
-               K=:='end'; K=:='->'; K =:= '||' ->
+        K when
+            K =:= ':';
+            K =:= ',';
+            K =:= ';';
+            K =:= ')';
+            K =:= '}';
+            K =:= ']';
+            K =:= '>>';
+            K =:= 'of';
+            K =:= 'end';
+            K =:= '->';
+            K =:= '||'
+        ->
             R0;
         K ->
             case erlide_scan:reserved_word(K) of
@@ -559,82 +598,87 @@ i_macro_rest(R0, I) ->
     end.
 
 i_if(R0, I0) ->
-    I1 = I0#i{in_block=true},
+    I1 = I0#i{in_block = true},
     R1 = i_kind('if', R0, I1),
     I2 = i_with('case', R0, I1),
     R2 = i_if_clause_list(R1, I2, none),
     i_block_end('if', R0, R2, I1).
 
 i_case(R0, I0) ->
-    I1 = I0#i{in_block=true},
+    I1 = I0#i{in_block = true},
     R1 = i_kind('case', R0, I1),
     I2 = i_with('case', R0, I1),
-    {R2, _A} = i_expr(R1, I2#i{in_block=false}, none),
+    {R2, _A} = i_expr(R1, I2#i{in_block = false}, none),
     R3 = i_kind('of', R2, I2),
     R4 = i_clause_list(R3, I2),
     i_block_end('case', R0, R4, I1).
 
 i_receive(R0, I0) ->
-    I1 = I0#i{in_block=true},
+    I1 = I0#i{in_block = true},
     R1 = i_kind('receive', R0, I1),
     I2 = i_with('case', R0, I1),
-    R2 = case i_sniff(R1) of
-             'after' ->
-                 R1;
-             _ ->
-                 i_clause_list(R1, I2)
-         end,
-    R4 = case i_sniff(R2) of
-             'after' ->
-                 I3 = i_with('after', R2, I1),
-                 R3 = i_kind('after', R2, I1),
-                 i_after_clause(R3, I3);
-             _ ->
-                 R2
-         end,
+    R2 =
+        case i_sniff(R1) of
+            'after' ->
+                R1;
+            _ ->
+                i_clause_list(R1, I2)
+        end,
+    R4 =
+        case i_sniff(R2) of
+            'after' ->
+                I3 = i_with('after', R2, I1),
+                R3 = i_kind('after', R2, I1),
+                i_after_clause(R3, I3);
+            _ ->
+                R2
+        end,
     i_block_end('receive', R0, R4, I1).
 
 i_try(R0, I0) ->
-    I1 = I0#i{in_block=true},
+    I1 = I0#i{in_block = true},
     R1 = i_kind('try', R0, I1),
     I2 = i_with('try', R0, I1),
     R2 = i_expr_list(R1, I2),
     ?D(R2),
-    R3 = case i_sniff(R2) of
-             'of' ->
-                 R21 = i_kind('of', R2, I1),
-                 i_clause_list(R21, I2);
-             _ ->
-                 R2
-         end,
-    R4 = case i_sniff(R3) of
-             'catch' ->
-                 R31 = i_kind('catch', R3, I1),
-                 I11 = i_with('catch', R3, I1),
-                 i_catch_clause_list(R31, I11);
-             _ ->
-                 R3
-         end,
-    R5 = case i_sniff(R4) of
-             'after' ->
-                 R41 = i_kind('after', R4, I1),
-                 I12 = i_with('after', R4, I1),
-                 i_expr_list(R41, I12);
-             _ ->
-                 R4
-         end,
+    R3 =
+        case i_sniff(R2) of
+            'of' ->
+                R21 = i_kind('of', R2, I1),
+                i_clause_list(R21, I2);
+            _ ->
+                R2
+        end,
+    R4 =
+        case i_sniff(R3) of
+            'catch' ->
+                R31 = i_kind('catch', R3, I1),
+                I11 = i_with('catch', R3, I1),
+                i_catch_clause_list(R31, I11);
+            _ ->
+                R3
+        end,
+    R5 =
+        case i_sniff(R4) of
+            'after' ->
+                R41 = i_kind('after', R4, I1),
+                I12 = i_with('after', R4, I1),
+                i_expr_list(R41, I12);
+            _ ->
+                R4
+        end,
     i_block_end('try', R0, R5, I0).
 
 is_binary_op([T | _]) ->
     is_binary_op(T);
-is_binary_op(#token{kind=Kind}) ->
+is_binary_op(#token{kind = Kind}) ->
     erlide_text:is_op2(Kind);
 is_binary_op(Kind) ->
     erlide_text:is_op2(Kind).
 
 is_unary_op([T | _]) ->
     is_unary_op(T);
-is_unary_op(#token{kind=Kind}) ->
+is_unary_op(#token{kind = Kind}) ->
     erlide_text:is_op1(Kind).
 
 i_block_end(_Begin, R0, R1, I0) ->
@@ -656,21 +700,22 @@ i_parameters(R, I) ->
         ')' ->
             R;
         _ ->
-            i_expr_list(R, I#i{in_block=false})
+            i_expr_list(R, I#i{in_block = false})
     end.
 
-i_record([#token{kind='#'} | R0], I0) ->
-    I = I0#i{in_block=false},
+i_record([#token{kind = '#'} | R0], I0) ->
+    I = I0#i{in_block = false},
     R1 = i_comments(R0, I),
     ?D(R1),
-    R2 = case i_sniff(R1) of
-             atom ->
-                 i_atom_or_macro(R1, I);
-             macro ->
-                 i_atom_or_macro(R1, I);
-             _ ->
-                 R1
-         end,
+    R2 =
+        case i_sniff(R1) of
+            atom ->
+                i_atom_or_macro(R1, I);
+            macro ->
+                i_atom_or_macro(R1, I);
+            _ ->
+                R1
+        end,
     ?D(R2),
     case i_sniff(R2) of
         '.' ->
@@ -697,7 +742,7 @@ comment_kind("%" ++ _) ->
 comment_kind(_) ->
     comment_0.
 
-i_comments([#token{kind=comment, value=V} = C | Rest], I) ->
+i_comments([#token{kind = comment, value = V} = C | Rest], I) ->
     case comment_kind(V) of
         comment_3 ->
             case i_check_aux([C], I) of
@@ -717,7 +762,7 @@ i_comments(Rest, I) ->
 
 skip_comments([]) ->
     [];
-skip_comments([#token{kind=comment} | Rest]) ->
+skip_comments([#token{kind = comment} | Rest]) ->
     skip_comments(Rest);
 skip_comments(Rest) ->
     Rest.
@@ -733,14 +778,16 @@ i_atom_or_macro(R0, I) ->
 
 i_kind(Kind, R0, I) ->
     R1 = i_comments(R0, I),
-    [#token{kind=Kind} | R2] = R1,
+    [#token{kind = Kind} | R2] = R1,
     R2.
 
 i_end_paren(R0, I) ->
     R1 = i_comments(R0, I),
     i_end_paren_1(R1, I).
 
-i_end_paren_1([#token{kind=Kind} | _] = R, I) when Kind==')'; Kind=='}'; Kind==']'; Kind=='>>'; Kind==eof ->
+i_end_paren_1([#token{kind = Kind} | _] = R, I) when
+    Kind == ')'; Kind == '}'; Kind == ']'; Kind == '>>'; Kind == eof
+->
     i_kind(Kind, R, I).
 
 i_form_list(R0, I) ->
@@ -759,7 +806,7 @@ i_form(R0, I) ->
 
 i_dot_or_semi(R, I) ->
     case i_sniff(R) of
-        DS when DS==dot; DS==';' ->
+        DS when DS == dot; DS == ';' ->
             i_kind(DS, R, I);
         _ ->
             R
@@ -769,10 +816,10 @@ i_declaration(R0, I) ->
     i_check(R0, I),
     R1 = i_kind('-', R0, I),
     case skip_comments(R1) of
-        [#token{kind=atom, value='spec'} | _] ->
+        [#token{kind = atom, value = 'spec'} | _] ->
             R2 = i_kind(atom, R1, I),
             i_spec(R2, I);
-        [#token{kind=atom, value='type'} | _] ->
+        [#token{kind = atom, value = 'type'} | _] ->
             R2 = i_kind(atom, R1, I),
             i_type(R2, I);
         _ ->
@@ -817,7 +864,8 @@ i_spec_list(R0, I) ->
     end.
 
 i_spec(R0, I) ->
-    R = case i_sniff(R0) of
+    R =
+        case i_sniff(R0) of
             '(' ->
                 R1 = i_kind('(', R0, I),
                 R2 = i_spec_list(R1, I),
@@ -831,18 +879,19 @@ i_spec(R0, I) ->
 i_fun_clause(R0, I0) ->
     R1 = i_comments(R0, I0),
     {R2, A} = i_expr(R0, I0, none),
-    I1 = i_with(before_arrow, A, I0#i{in_block=false}),
-    R3 = case i_sniff(R2) of
-             'when' ->
-                 R21 = i_kind('when', R2, I1),
-                 {R22, _A} = i_predicate_list(R21, I1),
-                 R22;
-             _ ->
-                 R2
-         end,
+    I1 = i_with(before_arrow, A, I0#i{in_block = false}),
+    R3 =
+        case i_sniff(R2) of
+            'when' ->
+                R21 = i_kind('when', R2, I1),
+                {R22, _A} = i_predicate_list(R21, I1),
+                R22;
+            _ ->
+                R2
+        end,
     R4 = i_kind('->', R3, I1),
     I2 = i_with(fun_body, R1, I0),
-    i_expr_list(R4, I2#i{in_block=true}).
+    i_expr_list(R4, I2#i{in_block = true}).
 
 i_fun_clause_list(R, I) ->
     R0 = i_fun_clause(R, I),
@@ -857,20 +906,21 @@ i_fun_clause_list(R, I) ->
 i_after_clause(R0, I0) ->
     {R1, _A} = i_expr(R0, I0, none),
     R2 = i_kind('->', R1, I0),
-    i_expr_list(R2, I0#i{in_block=true}).
+    i_expr_list(R2, I0#i{in_block = true}).
 
 i_clause(R0, I) ->
     {R1, A} = i_expr(R0, I, none),
     I1 = i_with(before_arrow, A, I),
-    R2 = case i_sniff(R1) of
-             'when' ->
-                 R11 = i_kind('when', R1, I1),
-                 {R12, _A} = i_predicate_list(R11, I1),
-                 R12;
-             _ ->
-                 R1
-         end,
-    I2 = I1#i{in_block=true},
+    R2 =
+        case i_sniff(R1) of
+            'when' ->
+                R11 = i_kind('when', R1, I1),
+                {R12, _A} = i_predicate_list(R11, I1),
+                R12;
+            _ ->
+                R1
+        end,
+    I2 = I1#i{in_block = true},
     R3 = i_kind('->', R2, I2),
     I3 = i_with(after_arrow, I2),
     R = i_expr_list(R3, I3),
@@ -893,7 +943,7 @@ i_if_clause(R0, I0) ->
     {R1, A} = i_predicate_list(R0, I0),
     I1 = i_with(before_arrow, A, I0),
     R2 = i_kind('->', R1, I1),
-    I2 = I1#i{in_block=true},
+    I2 = I1#i{in_block = true},
     I3 = i_with(after_arrow, I2),
     R = i_expr_list(R2, I3),
     ?D(R),
@@ -917,30 +967,33 @@ i_if_clause_list(R0, I0, A0) ->
 i_catch_clause(R0, I0) ->
     R1 = i_comments(R0, I0),
     ?D(R1),
-    R2 = case i_sniff(R1) of
-             atom -> i_kind(atom, R1, I0);
-             var -> i_kind(var, R1, I0)
-         end,
+    R2 =
+        case i_sniff(R1) of
+            atom -> i_kind(atom, R1, I0);
+            var -> i_kind(var, R1, I0)
+        end,
     ?D(R2),
-    R3 = case i_sniff(R2) of
-             ':' ->
-                 R21 = i_kind(':', R2, I0),
-                 ?D(R21),
-                 {R22, _A} = i_expr(R21, I0, none),
-                 ?D(R22),
-                 R22;
-             _ ->
-                 R2
-         end,
+    R3 =
+        case i_sniff(R2) of
+            ':' ->
+                R21 = i_kind(':', R2, I0),
+                ?D(R21),
+                {R22, _A} = i_expr(R21, I0, none),
+                ?D(R22),
+                R22;
+            _ ->
+                R2
+        end,
     I1 = i_with(before_arrow, R1, I0),
-    R4 = case i_sniff(R3) of
-             'when' ->
-                 R31 = i_kind('when', R3, I1),
-                 {R32, _A0} = i_predicate_list(R31, I1),
-                 R32;
-             _ ->
-                 R3
-         end,
+    R4 =
+        case i_sniff(R3) of
+            'when' ->
+                R31 = i_kind('when', R3, I1),
+                {R32, _A0} = i_predicate_list(R31, I1),
+                R32;
+            _ ->
+                R3
+        end,
     ?D(R4),
     R5 = i_kind('->', R4, I1),
     ?D(R5),
@@ -964,7 +1017,7 @@ i_sniff(L) ->
     case skip_comments(L) of
         [] ->
             eof;
-        [#token{kind=Kind} | _] ->
+        [#token{kind = Kind} | _] ->
             Kind
     end.
 
@@ -984,9 +1037,9 @@ quote_template_variables([], true, Acc) ->
 quote_template_variables([], false, Acc) ->
     lists:reverse(Acc);
 quote_template_variables("${" ++ Rest, _, Acc) ->
-    quote_template_variables(Rest, true, "{$'"++Acc);
-quote_template_variables("}"++Rest, true, Acc) ->
-    quote_template_variables(Rest, false, "'}"++Acc);
+    quote_template_variables(Rest, true, "{$'" ++ Acc);
+quote_template_variables("}" ++ Rest, true, Acc) ->
+    quote_template_variables(Rest, false, "'}" ++ Acc);
 quote_template_variables([C | Rest], V, Acc) ->
     quote_template_variables(Rest, V, [C | Acc]).
 
@@ -995,9 +1048,9 @@ unquote_template_variables(S) ->
 
 unquote_template_variables([], Acc) ->
     lists:reverse(Acc);
-unquote_template_variables("'${"++Rest, Acc) ->
-    unquote_template_variables(Rest, "{$"++Acc);
-unquote_template_variables("}'"++Rest, Acc) ->
-    unquote_template_variables(Rest, "}"++Acc);
+unquote_template_variables("'${" ++ Rest, Acc) ->
+    unquote_template_variables(Rest, "{$" ++ Acc);
+unquote_template_variables("}'" ++ Rest, Acc) ->
+    unquote_template_variables(Rest, "}" ++ Acc);
 unquote_template_variables([C | Rest], Acc) ->
     unquote_template_variables(Rest, [C | Acc]).

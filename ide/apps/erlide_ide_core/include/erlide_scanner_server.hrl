@@ -1,4 +1,7 @@
--record(module, {name,
-                 lines = [], % [{Length, String}]
-                 tokens = [] % [{Length, [Token]}]
-                }).
+-record(module, {
+    name,
+    % [{Length, String}]
+    lines = [],
+    % [{Length, [Token]}]
+    tokens = []
+}).

@@ -25,14 +25,16 @@ start(Client) ->
 stop(Server) ->
     Server ! stop.
 
-
 %% ----------------------------------------------------------------------
 
 -record(io_request, {
-         prompt,
-         mod, fn, args,
-         from, reply_as
-        }).
+    prompt,
+    mod,
+    fn,
+    args,
+    from,
+    reply_as
+}).
 
 shell_init(Client) ->
     erlang:process_flag(save_calls, 50),
@@ -58,7 +60,6 @@ shell_init(Client) ->
             exit(Reshd, kill)
     end.
 
-
 shell_loop(State, Reshd, Client) ->
     receive
         {input, Input} ->
@@ -68,10 +69,8 @@ shell_loop(State, Reshd, Client) ->
                 close ->
                     done
             end;
-
         stop ->
             done;
-
         {io_request, From, ReplyAs, Req} ->
             case handle_io_request(Client, State, From, ReplyAs, Req) of
                 {ok, NewState} ->
@@ -79,17 +78,13 @@ shell_loop(State, Reshd, Client) ->
                 close ->
                     done
             end;
-
         {'EXIT', Reshd, normal} ->
             done;
-
         {'EXIT', Reshd, _OtherReason} ->
             done;
-
         _Other ->
             shell_loop(State, Reshd, Client)
     end.
-
 
 %% Returns:
 %%   {ok, NewState} |
@@ -102,30 +97,36 @@ handle_input(Client, State, Input) ->
             NewInput = PendingInput ++ Input,
             {ok, {pending_input, NewInput}};
         {pending_request, Cont, [FirstReq | RestReqs] = Requests} ->
-            #io_request{prompt = Prompt,
-                        mod = Mod,
-                        fn = Fun,
-                        args = Args} = FirstReq,
-            case catch apply(Mod, Fun, [Cont, Input|Args]) of
+            #io_request{
+                prompt = Prompt,
+                mod = Mod,
+                fn = Fun,
+                args = Args
+            } = FirstReq,
+            case catch apply(Mod, Fun, [Cont, Input | Args]) of
                 {more, NewCont} ->
                     print_prompt(Client, Prompt, self()),
                     {ok, {pending_request, NewCont, Requests}};
                 {done, Result, []} ->
-                    #io_request{from = From,
-                                reply_as = ReplyAs} = FirstReq,
+                    #io_request{
+                        from = From,
+                        reply_as = ReplyAs
+                    } = FirstReq,
                     _ = io_reply(From, ReplyAs, Result),
                     case length(RestReqs) of
                         0 ->
                             {ok, idle};
                         _N ->
-                            [#io_request{prompt = NextPrompt}|_] = RestReqs,
+                            [#io_request{prompt = NextPrompt} | _] = RestReqs,
                             print_prompt(Client, NextPrompt, self()),
                             InitCont = init_cont(),
                             {ok, {pending_request, InitCont, RestReqs}}
                     end;
                 {done, Result, RestChars} ->
-                    #io_request{from = From,
-                                reply_as = ReplyAs} = FirstReq,
+                    #io_request{
+                        from = From,
+                        reply_as = ReplyAs
+                    } = FirstReq,
                     _ = io_reply(From, ReplyAs, Result),
                     case length(RestReqs) of
                         0 ->
@@ -136,42 +137,43 @@ handle_input(Client, State, Input) ->
                             handle_input(Client, RestChars, TmpState)
                     end;
                 Other ->
-                    logerror("~p:handle_input: Unexpected result: ~p~n",
-                             [?MODULE, Other]),
+                    logerror(
+                        "~p:handle_input: Unexpected result: ~p~n",
+                        [?MODULE, Other]
+                    ),
                     close
             end
     end.
 
-
 put_chars(From, ReplyAs, State, Encoding, Mod, Fun, Args) ->
-    Text = case catch apply(Mod, Fun, Args) of
-               {'EXIT', _Reason} -> "";
-               Txt -> Txt
-           end,
+    Text =
+        case catch apply(Mod, Fun, Args) of
+            {'EXIT', _Reason} -> "";
+            Txt -> Txt
+        end,
     FlatText = string_flatten(Text),
     send_event(FlatText, From, Encoding),
     _ = io_reply(From, ReplyAs, ok),
     {ok, State}.
 
-
 get_until(From, ReplyAs, Client, State, _Encoding, Prompt, Mod, Fun, Args) ->
-    NewReq = #io_request{prompt = Prompt,
-                         mod = Mod,
-                         fn = Fun,
-                         args = Args,
-                         from = From,
-                         reply_as = ReplyAs},
+    NewReq = #io_request{
+        prompt = Prompt,
+        mod = Mod,
+        fn = Fun,
+        args = Args,
+        from = From,
+        reply_as = ReplyAs
+    },
     case State of
         {pending_request, Cont, PendingReqs} ->
-            NewState = {pending_request, Cont, PendingReqs++[NewReq]},
+            NewState = {pending_request, Cont, PendingReqs ++ [NewReq]},
             {ok, NewState};
-
         idle ->
             print_prompt(Client, Prompt, From),
             InitContinuation = init_cont(),
             NewState = {pending_request, InitContinuation, [NewReq]},
             {ok, NewState};
-
         {pending_input, Input} ->
             InitContinuation = init_cont(),
             TmpState = {pending_request, InitContinuation, [NewReq]},
@@ -184,7 +186,6 @@ put_chars(From, ReplyAs, State, Encoding, Text) ->
     _ = io_reply(From, ReplyAs, ok),
     {ok, State}.
 
-
 %% Returns:
 %%   {ok, NewState} |
 %%   close
@@ -194,43 +195,40 @@ handle_io_request(Client, State, From, ReplyAs, IoRequest) ->
             put_chars(From, ReplyAs, State, latin1, Mod, Fun, Args);
         {put_chars, Encoding, Mod, Fun, Args} ->
             put_chars(From, ReplyAs, State, Encoding, Mod, Fun, Args);
-
         {put_chars, Text} ->
             put_chars(From, ReplyAs, State, latin1, Text);
         {put_chars, Encoding, Text} ->
             put_chars(From, ReplyAs, State, Encoding, Text);
-
         {get_until, Prompt, Mod, Fun, Args} ->
             get_until(From, ReplyAs, Client, State, latin1, Prompt, Mod, Fun, Args);
         {get_until, Encoding, Prompt, Mod, Fun, Args} ->
             get_until(From, ReplyAs, Client, State, Encoding, Prompt, Mod, Fun, Args);
-
         {get_geometry, _} ->
-            io_reply(From, ReplyAs, {error,enotsup}),
+            io_reply(From, ReplyAs, {error, enotsup}),
             {ok, State};
-
         {requests, IoReqests} ->
             handle_io_requests(Client, State, From, ReplyAs, IoReqests);
-
         getopts ->
             _ = io_reply(From, ReplyAs, [{encoding, latin1}]),
             {ok, State};
-
         UnexpectedIORequest ->
-            loginfo("~p:handle_io_request: Unexpected IORequest:~p~n",
-                    [?MODULE, UnexpectedIORequest]),
+            loginfo(
+                "~p:handle_io_request: Unexpected IORequest:~p~n",
+                [?MODULE, UnexpectedIORequest]
+            ),
             _ = io_reply(From, ReplyAs, ok),
             {ok, State}
     end.
 
 send_event(String, From, Encoding) ->
     %%Client ! {String, group_leader(), From, erlide_time_compat:timestamp()},
-    erlide_jrpc:event(io_server, {String, Encoding, group_leader(), From, erlide_time_compat:timestamp()}).
-
+    erlide_jrpc:event(
+        io_server, {String, Encoding, group_leader(), From, erlide_time_compat:timestamp()}
+    ).
 
 handle_io_requests(ClientSocket, State0, From, ReplyAs, [LastIoReq]) ->
     handle_io_request(ClientSocket, State0, From, ReplyAs, LastIoReq);
-handle_io_requests(ClientSocket, State0, From, ReplyAs, [IoReq|Rest]) ->
+handle_io_requests(ClientSocket, State0, From, ReplyAs, [IoReq | Rest]) ->
     case handle_io_request(ClientSocket, State0, none, ReplyAs, IoReq) of
         {ok, State1} ->
             handle_io_requests(ClientSocket, State1, From, ReplyAs, Rest);
@@ -239,7 +237,6 @@ handle_io_requests(ClientSocket, State0, From, ReplyAs, [IoReq|Rest]) ->
     end;
 handle_io_requests(_ClientSocket, State, _From, _ReplyAs, []) ->
     {ok, State}.
-
 
 init_cont() ->
     [].
@@ -250,26 +247,27 @@ io_reply(From, ReplyAs, Result) ->
     From ! {io_reply, ReplyAs, Result}.
 
 print_prompt(_Client, Prompt, From) ->
-    PromptText = case Prompt of
-                     TxtAtom when is_atom(TxtAtom) ->
-                         io_lib:format('~s', [TxtAtom]);
-                     {IoFun, PromptFmtStr, PromptArgs} ->
-                         case catch io_lib:IoFun(PromptFmtStr, PromptArgs) of
-                             {'EXIT',_Err} ->
-                                 "???";
-                             T ->
-                                 T
-                         end;
-                     {IoFun, PromptFmtStr} ->
-                         case catch io_lib:IoFun(PromptFmtStr, []) of
-                             {'EXIT',_} -> "???";
-                             T -> T
-                         end;
-                     List when is_list(List) ->
-                         List;
-                     Term ->
-                         io_lib:write(Term)
-                 end,
+    PromptText =
+        case Prompt of
+            TxtAtom when is_atom(TxtAtom) ->
+                io_lib:format('~s', [TxtAtom]);
+            {IoFun, PromptFmtStr, PromptArgs} ->
+                case catch io_lib:IoFun(PromptFmtStr, PromptArgs) of
+                    {'EXIT', _Err} ->
+                        "???";
+                    T ->
+                        T
+                end;
+            {IoFun, PromptFmtStr} ->
+                case catch io_lib:IoFun(PromptFmtStr, []) of
+                    {'EXIT', _} -> "???";
+                    T -> T
+                end;
+            List when is_list(List) ->
+                List;
+            Term ->
+                io_lib:write(Term)
+        end,
     FlatText = string_flatten(PromptText),
     send_event(FlatText, From, latin1),
     ok.
@@ -295,8 +293,12 @@ logerror(FmtStr, Args) ->
 fmt(FmtStr, Args) ->
     case catch io_lib:format(FmtStr, Args) of
         {'EXIT', _Reason} ->
-            string_flatten(io_lib:format("Badly formatted text: ~p, ~p~n",
-                                         [FmtStr, Args]));
+            string_flatten(
+                io_lib:format(
+                    "Badly formatted text: ~p, ~p~n",
+                    [FmtStr, Args]
+                )
+            );
         DeepText ->
             string_flatten(DeepText)
     end.

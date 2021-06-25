@@ -23,36 +23,35 @@
 %%-define(DEBUG, 1).
 -include_lib("erlide_common/include/erlide_dbglog.hrl").
 
-
 %% --------------------------------------------------------------------
 %% External exports
 -export([
-		 start/0,
-		 stop/0,
-		 add_project/2,
-		 remove_project/1
-		]).
+    start/0,
+    stop/0,
+    add_project/2,
+    remove_project/1
+]).
 
 %% gen_server callbacks
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2, code_change/3]).
 
--record(state, {slaves=[]}).
+-record(state, {slaves = []}).
 
 %% ====================================================================
 %% External functions
 %% ====================================================================
 
 start() ->
-	gen_server:start({local, ?MODULE}, ?MODULE, [], []).
+    gen_server:start({local, ?MODULE}, ?MODULE, [], []).
 
 stop() ->
-	gen_server:cast(?MODULE, stop).
+    gen_server:cast(?MODULE, stop).
 
 add_project(Id, Data) ->
-	gen_server:call(?MODULE, {add_project, Id, Data}).
+    gen_server:call(?MODULE, {add_project, Id, Data}).
 
 remove_project(Id) ->
-	gen_server:call(?MODULE, {remove_project, Id}).
+    gen_server:call(?MODULE, {remove_project, Id}).
 
 %% ====================================================================
 %% Server functions
@@ -79,25 +78,25 @@ init(_) ->
 %%          {stop, Reason, Reply, State}   | (terminate/2 is called)
 %%          {stop, Reason, State}            (terminate/2 is called)
 %% --------------------------------------------------------------------
-handle_call({add_project, Id, Data}, _From, #state{slaves=Slaves}=State) ->
-	{ok, Pid} = erlide_builder_slave:start(Id, Data),
-	erlang:monitor(process, Pid),
-	case lists:keytake(Id, 1, Slaves) of
-		{value, _, _} ->
-			{reply, {error, project_exists}, State};
-		false ->
-			erlide_log:log({builder_server, add_project, Id}),
-			{reply, {ok, Pid}, State#state{slaves=[{Id, Pid} | Slaves]}}
-	end;
-handle_call({remove_project, Id}, _From, #state{slaves=Slaves}=State) ->
+handle_call({add_project, Id, Data}, _From, #state{slaves = Slaves} = State) ->
+    {ok, Pid} = erlide_builder_slave:start(Id, Data),
+    erlang:monitor(process, Pid),
     case lists:keytake(Id, 1, Slaves) of
-		{value, {Id, Pid}, NewSlaves} ->
-			erlide_log:log({builder_server, remove_project, Id}),
-			erlide_builder_slave:stop(Pid),
-			{reply, ok, State#state{slaves=NewSlaves}};
-		false ->
-			{reply, {error, no_project}, State}
-	end;
+        {value, _, _} ->
+            {reply, {error, project_exists}, State};
+        false ->
+            erlide_log:log({builder_server, add_project, Id}),
+            {reply, {ok, Pid}, State#state{slaves = [{Id, Pid} | Slaves]}}
+    end;
+handle_call({remove_project, Id}, _From, #state{slaves = Slaves} = State) ->
+    case lists:keytake(Id, 1, Slaves) of
+        {value, {Id, Pid}, NewSlaves} ->
+            erlide_log:log({builder_server, remove_project, Id}),
+            erlide_builder_slave:stop(Pid),
+            {reply, ok, State#state{slaves = NewSlaves}};
+        false ->
+            {reply, {error, no_project}, State}
+    end;
 handle_call(Request, _From, State) ->
     Reply = {error, unexpected, Request},
     {reply, Reply, State}.
@@ -110,7 +109,7 @@ handle_call(Request, _From, State) ->
 %%          {stop, Reason, State}            (terminate/2 is called)
 %% --------------------------------------------------------------------
 handle_cast(stop, State) ->
-	{stop, normal, State};
+    {stop, normal, State};
 handle_cast(_Msg, State) ->
     {noreply, State}.
 
@@ -121,15 +120,16 @@ handle_cast(_Msg, State) ->
 %%          {noreply, State, Timeout} |
 %%          {stop, Reason, State}            (terminate/2 is called)
 %% --------------------------------------------------------------------
-handle_info({'DOWN', _Mref, _, Pid, _Info}, #state{slaves=Slaves}=State) ->
-	NewSlaves = case lists:keytake(Pid, 2, Slaves) of
-					false ->
-						Slaves;
-					{value, {Id, Pid}, New} ->
-						erlide_log:log({builder_slave_died, Id}),
-						New
-				end,
-	{noreply, State#state{slaves=NewSlaves}};
+handle_info({'DOWN', _Mref, _, Pid, _Info}, #state{slaves = Slaves} = State) ->
+    NewSlaves =
+        case lists:keytake(Pid, 2, Slaves) of
+            false ->
+                Slaves;
+            {value, {Id, Pid}, New} ->
+                erlide_log:log({builder_slave_died, Id}),
+                New
+        end,
+    {noreply, State#state{slaves = NewSlaves}};
 handle_info(_Info, State) ->
     {noreply, State}.
 
@@ -152,6 +152,3 @@ code_change(_OldVsn, State, _Extra) ->
 %% --------------------------------------------------------------------
 %%% Internal functions
 %% --------------------------------------------------------------------
-
-
-

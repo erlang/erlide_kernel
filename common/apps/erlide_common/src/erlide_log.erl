@@ -34,5 +34,6 @@ erlangLog(Module, Line, Level, Msg) when is_atom(Level) ->
     erlide_jrpc:event(erlang_log, {Module, Line, Level, Msg}).
 
 erlangLogStack(Module, Line, Level, Msg) when is_atom(Level) ->
-    erlide_jrpc:event(erlang_log, {Module, Line, Level, Msg, erlang:process_info(self(), backtrace)}).
-
+    erlide_jrpc:event(
+        erlang_log, {Module, Line, Level, Msg, erlang:process_info(self(), backtrace)}
+    ).

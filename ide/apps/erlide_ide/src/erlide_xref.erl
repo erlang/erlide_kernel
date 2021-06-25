@@ -1,23 +1,24 @@
 -module(erlide_xref).
 
--export([start/0,
-         stop/0,
-         add_project/1,
-         add_dirs/1,
-         analyze/1,
-         function_call/1,
-         function_use/1,
-         function_call/3,
-         function_use/3,
-         modules/0,
-         module_call/1,
-         module_use/1,
-         update/0]).
+-export([
+    start/0,
+    stop/0,
+    add_project/1,
+    add_dirs/1,
+    analyze/1,
+    function_call/1,
+    function_use/1,
+    function_call/3,
+    function_use/3,
+    modules/0,
+    module_call/1,
+    module_use/1,
+    update/0
+]).
 
 %-define(DEBUG, 1).
 
 -define(XREF, erlide_xref).
-
 
 -include_lib("erlide_common/include/erlide_dbglog.hrl").
 
@@ -29,7 +30,7 @@ start(undefined) ->
     erlang:process_flag(save_calls, 50),
     erlang:yield(),
     xref:start(?XREF),
-    xref:set_default(?XREF, [{verbose,false},{warnings,false}]),
+    xref:set_default(?XREF, [{verbose, false}, {warnings, false}]),
     %% 				  X= xref:add_release(erlide, code:lib_dir(),
     %% 									  [{name, otp}]),
     %% 		  ok
@@ -42,7 +43,7 @@ stop() ->
     xref:stop(?XREF).
 
 add_project(ProjectDir) ->
-    R=xref:add_application(?XREF, ProjectDir),
+    R = xref:add_application(?XREF, ProjectDir),
     R.
 
 add_dirs([]) ->

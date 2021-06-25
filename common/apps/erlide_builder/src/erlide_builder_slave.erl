@@ -23,16 +23,15 @@
 %%-define(DEBUG, 1).
 -include_lib("erlide_common/include/erlide_dbglog.hrl").
 
-
 %% --------------------------------------------------------------------
 %% External exports
 -export([
-		 start/2,
-		 stop/1,
-		 build_full/1,
-		 build_incremental/2,
-		 clean/1
-		]).
+    start/2,
+    stop/1,
+    build_full/1,
+    build_incremental/2,
+    clean/1
+]).
 
 %% gen_server callbacks
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2, code_change/3]).
@@ -44,20 +43,19 @@
 %% ====================================================================
 
 start(Id, Configuration) ->
-	gen_server:start(?MODULE, [Id, Configuration], []).
+    gen_server:start(?MODULE, [Id, Configuration], []).
 
 stop(Pid) ->
-	gen_server:cast(Pid, stop).
+    gen_server:cast(Pid, stop).
 
 build_full(Pid) ->
-	gen_server:call(Pid, full_build).
+    gen_server:call(Pid, full_build).
 
 build_incremental(Pid, Delta) ->
-	gen_server:call(Pid, {incremental_build, Delta}).
+    gen_server:call(Pid, {incremental_build, Delta}).
 
 clean(Pid) ->
-	gen_server:call(Pid, clean).
-
+    gen_server:call(Pid, clean).
 
 %% ====================================================================
 %% Server functions
@@ -72,8 +70,8 @@ clean(Pid) ->
 %%          {stop, Reason}
 %% --------------------------------------------------------------------
 init([Id, Data]) ->
-	erlide_log:log({builder_slave, started, Id}),
-    {ok, #state{id=Id, data=Data}}.
+    erlide_log:log({builder_slave, started, Id}),
+    {ok, #state{id = Id, data = Data}}.
 
 %% --------------------------------------------------------------------
 %% Function: handle_call/3
@@ -96,9 +94,9 @@ handle_call(Request, _From, State) ->
 %%          {noreply, State, Timeout} |
 %%          {stop, Reason, State}            (terminate/2 is called)
 %% --------------------------------------------------------------------
-handle_cast(stop, #state{id=Id}=State) ->
-	erlide_log:log({builder_slave, stopped, Id}),
-	{stop, normal, State};
+handle_cast(stop, #state{id = Id} = State) ->
+    erlide_log:log({builder_slave, stopped, Id}),
+    {stop, normal, State};
 handle_cast(_Msg, State) ->
     {noreply, State}.
 
@@ -131,7 +129,3 @@ code_change(_OldVsn, State, _Extra) ->
 %% --------------------------------------------------------------------
 %%% Internal functions
 %% --------------------------------------------------------------------
-
-
-
-

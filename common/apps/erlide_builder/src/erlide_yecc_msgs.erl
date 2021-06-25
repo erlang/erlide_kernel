@@ -15,34 +15,33 @@ start() ->
     case whereis(?MODULE) of
         undefined ->
             Id = spawn(fun server/0),
-            register(?MODULE,Id),
-       	    Id;
+            register(?MODULE, Id),
+            Id;
         Pid ->
             Pid
     end.
 
 server() ->
     group_leader(self(), self()),
-	erlang:process_flag(save_calls, 50),
+    erlang:process_flag(save_calls, 50),
     server_loop([]).
 
 server_loop(Msgs) ->
     receive
-	{io_request, From, ReplyAs, Request} ->
-	    From ! {io_reply, ReplyAs, ok},
+        {io_request, From, ReplyAs, Request} ->
+            From ! {io_reply, ReplyAs, ok},
             Msg = get_msg(Request),
-	    ?MODULE:server_loop([Msg|Msgs]);
+            ?MODULE:server_loop([Msg | Msgs]);
         {get_msgs, From} ->
             From ! {msgs, lists:flatten(lists:reverse(Msgs))},
             ?MODULE:server_loop([]);
-	_Other ->
-	    ?MODULE:server_loop(Msgs)
+        _Other ->
+            ?MODULE:server_loop(Msgs)
     end.
 
 %% Return the pid of the shell process.
 interfaces(_User) ->
-	    [].
-
+    [].
 
 get_msg({put_chars, io_lib, format, ["~s", [A]]}) ->
     [parse(A)];
@@ -57,13 +56,13 @@ get_msg(_Request) ->
 
 parse(Str) ->
     T0 = string:tokens(Str, ":\n"),
-    T = case length(hd(T0)) of
+    T =
+        case length(hd(T0)) of
             1 ->
-                [A,B|C] = T0,
-                [A++":"++B|C];
+                [A, B | C] = T0,
+                [A ++ ":" ++ B | C];
             _ ->
                 T0
         end,
-    [File, Line|Msg] = T,
+    [File, Line | Msg] = T,
     {list_to_integer(Line), File, string:strip(lists:flatten(Msg)), ?ERROR}.
-

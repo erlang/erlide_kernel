@@ -4,8 +4,13 @@
 
 -export([start/1]).
 
--export([init/1, handle_begin/3, handle_end/3, handle_cancel/3,
-         terminate/2]).
+-export([
+    init/1,
+    handle_begin/3,
+    handle_end/3,
+    handle_cancel/3,
+    terminate/2
+]).
 
 start(Options) ->
     eunit_listener:start(?MODULE, Options).

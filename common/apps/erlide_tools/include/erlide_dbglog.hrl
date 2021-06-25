@@ -12,5 +12,3 @@
 -else.
 -define(D(T), ok).
 -endif.
-
-

@@ -23,14 +23,13 @@ parse1(Toks) ->
     end.
 
 split(L) ->
-    split(L , [], []).
+    split(L, [], []).
 
 split([], R, []) ->
     lists:reverse(R);
 split([], R, Acc) ->
     lists:reverse(R, [lists:reverse(Acc)]);
-split([{dot, _}=H|T], R, Acc) ->
-    split(T, [lists:reverse(Acc, [H])|R], []);
-split([H|T], R, Acc) ->
-    split(T, R, [H|Acc]).
-
+split([{dot, _} = H | T], R, Acc) ->
+    split(T, [lists:reverse(Acc, [H]) | R], []);
+split([H | T], R, Acc) ->
+    split(T, R, [H | Acc]).

@@ -17,11 +17,21 @@
 %% Exported Functions
 %%
 
--export([light_scan_string/2, scan_string/1, initial_scan_0/5, initial_scan/5,
-         get_token_at/2,
-         create/1, addref/1, dispose/1, get_text/1,
-         get_tokens/1, get_token_window/4,
-         dump_module/1, replace_text/4]).
+-export([
+    light_scan_string/2,
+    scan_string/1,
+    initial_scan_0/5,
+    initial_scan/5,
+    get_token_at/2,
+    create/1,
+    addref/1,
+    dispose/1,
+    get_text/1,
+    get_tokens/1,
+    get_token_window/4,
+    dump_module/1,
+    replace_text/4
+]).
 
 %%
 %% API Functions
@@ -45,15 +55,21 @@ scan_string(L) when is_list(L) ->
 initial_scan_0(ScannerName, ModuleFileName, Text, StateDir, UseCache) ->
     CacheFileName = filename:join(StateDir, atom_to_list(ScannerName) ++ ".scan"),
     RenewFun = fun(_F) -> erlide_scan_model:do_scan(ScannerName, Text) end,
-    erlide_cache:check_and_renew_cached(ModuleFileName, CacheFileName, ?CACHE_VERSION, RenewFun, UseCache).
+    erlide_cache:check_and_renew_cached(
+        ModuleFileName, CacheFileName, ?CACHE_VERSION, RenewFun, UseCache
+    ).
 
 get_token_at(ScannerName, Offset) when is_atom(ScannerName), is_integer(Offset) ->
     erlide_scanner_server:server_cmd(ScannerName, get_token_at, Offset).
 
-initial_scan(ScannerName, ModuleFileName, InitialText, StateDir, UseCache)
-  when is_atom(ScannerName), is_list(ModuleFileName), is_list(InitialText), is_list(StateDir) ->
-    erlide_scanner_server:server_cmd(ScannerName, initial_scan,
-                                     {ScannerName, ModuleFileName, InitialText, StateDir, UseCache}).
+initial_scan(ScannerName, ModuleFileName, InitialText, StateDir, UseCache) when
+    is_atom(ScannerName), is_list(ModuleFileName), is_list(InitialText), is_list(StateDir)
+->
+    erlide_scanner_server:server_cmd(
+        ScannerName,
+        initial_scan,
+        {ScannerName, ModuleFileName, InitialText, StateDir, UseCache}
+    ).
 
 create(ScannerName) when is_atom(ScannerName) ->
     erlide_scanner_server:spawn_server(ScannerName).
@@ -71,15 +87,17 @@ get_text(ScannerName) when is_atom(ScannerName) ->
 get_tokens(ScannerName) when is_atom(ScannerName) ->
     erlide_scanner_server:server_cmd(ScannerName, get_tokens).
 
-get_token_window(ScannerName, Offset, Before, After)
-  when is_atom(ScannerName), is_integer(Offset), is_integer(Before), is_integer(After) ->
+get_token_window(ScannerName, Offset, Before, After) when
+    is_atom(ScannerName), is_integer(Offset), is_integer(Before), is_integer(After)
+->
     erlide_scanner_server:server_cmd(ScannerName, get_token_window, {Offset, Before, After}).
 
 dump_module(ScannerName) when is_atom(ScannerName) ->
     erlide_scanner_server:server_cmd(ScannerName, dump_module).
 
-replace_text(ScannerName, Offset, RemoveLength, NewText)
-  when is_atom(ScannerName), is_integer(Offset), is_integer(RemoveLength), is_list(NewText) ->
+replace_text(ScannerName, Offset, RemoveLength, NewText) when
+    is_atom(ScannerName), is_integer(Offset), is_integer(RemoveLength), is_list(NewText)
+->
     erlide_scanner_server:server_cmd(ScannerName, replace_text, {Offset, RemoveLength, NewText}).
 
 %%
@@ -102,23 +120,35 @@ do_light_scan(S) ->
 -define(TOK_CHAR, 5).
 -define(TOK_MACRO, 6).
 -define(TOK_ARROW, 7).
--define(TOK_INTEGER,8).
+-define(TOK_INTEGER, 8).
 -define(TOK_FLOAT, 9).
 -define(TOK_COMMENT, 10).
 -define(TOK_KEYWORD, 11).
 
-kind_small(ws) -> ?TOK_WS;
-kind_small(white_space) -> ?TOK_WS;
-kind_small(string) -> ?TOK_STR;
-kind_small(atom) -> ?TOK_ATOM;
-kind_small(var) -> ?TOK_VAR;
-kind_small(macro) -> ?TOK_MACRO;
-kind_small(dot) -> ?TOK_OTHER;
-kind_small(float) -> ?TOK_FLOAT;
-kind_small(integer) -> ?TOK_INTEGER;
-kind_small(char) -> ?TOK_CHAR;
-kind_small('->') -> ?TOK_ARROW;
-kind_small(comment) -> ?TOK_COMMENT;
+kind_small(ws) ->
+    ?TOK_WS;
+kind_small(white_space) ->
+    ?TOK_WS;
+kind_small(string) ->
+    ?TOK_STR;
+kind_small(atom) ->
+    ?TOK_ATOM;
+kind_small(var) ->
+    ?TOK_VAR;
+kind_small(macro) ->
+    ?TOK_MACRO;
+kind_small(dot) ->
+    ?TOK_OTHER;
+kind_small(float) ->
+    ?TOK_FLOAT;
+kind_small(integer) ->
+    ?TOK_INTEGER;
+kind_small(char) ->
+    ?TOK_CHAR;
+kind_small('->') ->
+    ?TOK_ARROW;
+kind_small(comment) ->
+    ?TOK_COMMENT;
 kind_small(Kind) when is_atom(Kind) ->
     case erlide_scan:reserved_word(Kind) of
         true ->
@@ -131,9 +161,12 @@ kind_small(Kind) when is_atom(Kind) ->
     end.
 
 convert_tokens(Tokens) ->
-    Fun = fun(#token{kind=Kind, line=L, offset=O, text=Txt}) ->
-                  G = case is_list(Txt) of true -> length(Txt); _ -> byte_size(Txt) end,
-                  <<(kind_small(Kind)), L:24, O:24, G:24>>
-          end,
+    Fun = fun(#token{kind = Kind, line = L, offset = O, text = Txt}) ->
+        G =
+            case is_list(Txt) of
+                true -> length(Txt);
+                _ -> byte_size(Txt)
+            end,
+        <<(kind_small(Kind)), L:24, O:24, G:24>>
+    end,
     list_to_binary(lists:flatten([Fun(X) || X <- Tokens])).
-

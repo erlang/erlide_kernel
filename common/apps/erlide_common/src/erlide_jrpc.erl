@@ -5,13 +5,13 @@
 %% careless update of code could make nothing work anymore.
 
 -export([
-         init/1,
-         add_service/2,
-         get_service_listeners/1,
-         notify/2,
+    init/1,
+    add_service/2,
+    get_service_listeners/1,
+    notify/2,
 
-         event/2
-        ]).
+    event/2
+]).
 
 -include("erlide_dbglog.hrl").
 
@@ -21,9 +21,9 @@ init(JPid) ->
     case whereis(?MANAGER) of
         undefined ->
             Pid = spawn(fun() ->
-                                erlang:process_flag(save_calls, 50),
-                                manager([])
-                        end),
+                erlang:process_flag(save_calls, 50),
+                manager([])
+            end),
             register(?MANAGER, Pid);
         _ ->
             ok
@@ -38,7 +38,6 @@ init(JPid) ->
 
     ok.
 
-
 event(Id, Msg) ->
     Self = self(),
     %% we can't notify asynchronously because order of messages can get wrong
@@ -48,25 +47,27 @@ manager(State) ->
     receive
         {add, Service, Pid} ->
             Old = keytake(Service, 1, State),
-            State2 = case Old of
-                         false ->
-                             [{Service, [Pid]}];
-                         {value, {Service, Values}, State1} ->
-                             case lists:member(Pid, Values) of
-                                 true ->
-                                     State;
-                                 false ->
-                                     [{Service, [Pid|Values]} | State1]
-                             end
-                     end,
+            State2 =
+                case Old of
+                    false ->
+                        [{Service, [Pid]}];
+                    {value, {Service, Values}, State1} ->
+                        case lists:member(Pid, Values) of
+                            true ->
+                                State;
+                            false ->
+                                [{Service, [Pid | Values]} | State1]
+                        end
+                end,
             manager(State2);
         {get, Service, From, Ref} ->
-            Value = case lists:keysearch(Service, 1, State) of
-                        false ->
-                            [];
-                        {value, {Service, Pids}} ->
-                            Pids
-                    end,
+            Value =
+                case lists:keysearch(Service, 1, State) of
+                    false ->
+                        [];
+                    {value, {Service, Pids}} ->
+                        Pids
+                end,
             From ! {Ref, Value},
             manager(State);
         stop ->
@@ -81,10 +82,13 @@ add_service(Service, Pid) when is_atom(Service), is_pid(Pid) ->
 get_service_listeners(Service) when is_atom(Service) ->
     Ref = make_ref(),
     catch (?MANAGER ! {get, Service, self(), Ref}),
-    receive {Ref, X} -> X end.
+    receive
+        {Ref, X} -> X
+    end.
 
 notify(Service, Message) when is_atom(Service) ->
-    L = case get_service_listeners(Service) of
+    L =
+        case get_service_listeners(Service) of
             [] ->
                 get_service_listeners(generic_catchall);
             L0 ->
@@ -96,8 +100,9 @@ notify(Service, Message) when is_atom(Service) ->
 keytake(Key, N, L) when is_integer(N), N > 0 ->
     keytake(Key, N, L, []).
 
-keytake(Key, N, [H|T], L) when element(N, H) == Key ->
+keytake(Key, N, [H | T], L) when element(N, H) == Key ->
     {value, H, lists:reverse(L, T)};
-keytake(Key, N, [H|T], L) ->
-    keytake(Key, N, T, [H|L]);
-keytake(_K, _N, [], _L) -> false.
+keytake(Key, N, [H | T], L) ->
+    keytake(Key, N, T, [H | L]);
+keytake(_K, _N, [], _L) ->
+    false.

@@ -68,5 +68,3 @@ convert_error(File, [Digit | _] = LineNoS, Text, Severity) when $0 =< Digit, Dig
     end;
 convert_error(_, _, _, _) ->
     not_an_error_line.
-
-

@@ -16,8 +16,10 @@
 %% Exported Functions
 %%
 
--export([server_cmd/2, server_cmd/3,
-         spawn_server/1]).
+-export([
+    server_cmd/2, server_cmd/3,
+    spawn_server/1
+]).
 
 %% stop/0
 
@@ -38,18 +40,19 @@ server_cmd(ScannerName, Command, Args) ->
             {Command, _Pid, Result} ->
                 Result
         end
-    catch _:Exception ->
-              {error, Exception, erlang:get_stacktrace()}
+    catch
+        _:Exception ->
+            {error, Exception, erlang:get_stacktrace()}
     end.
 
 spawn_server(ScannerName) ->
     case whereis(ScannerName) of
         undefined ->
             Pid = spawn(fun() ->
-                                erlang:process_flag(save_calls, 50),
-                                erlang:process_flag(min_heap_size, 64*1024),
-                                loop(#module{name=ScannerName}, 0)
-                        end),
+                erlang:process_flag(save_calls, 50),
+                erlang:process_flag(min_heap_size, 64 * 1024),
+                loop(#module{name = ScannerName}, 0)
+            end),
             erlang:register(ScannerName, Pid);
         _ ->
             ok
@@ -66,15 +69,15 @@ loop(Module, Refs) ->
         {addref, From, []} ->
             ?D({addref, Module#module.name}),
             reply(addref, From, ok),
-            ?MODULE:loop(Module, Refs+1);
+            ?MODULE:loop(Module, Refs + 1);
         {dispose, From, []} ->
             ?D({dispose, Module#module.name}),
             reply(dispose, From, ok),
-            case Refs=<1 of
+            case Refs =< 1 of
                 true ->
                     ok;
                 _ ->
-                    ?MODULE:loop(Module, Refs-1)
+                    ?MODULE:loop(Module, Refs - 1)
             end;
         {Cmd, From, Args} ->
             NewModule = cmd(Cmd, From, Args, Module),
@@ -108,7 +111,9 @@ reply(Cmd, From, R) ->
 
 do_cmd(initial_scan, {ScannerName, ModuleFileName, InitialText, StateDir, UseCache}, _Module) ->
     ?D({initial_scan, ScannerName, length(InitialText)}),
-    {Cached, Module1} = erlide_scanner:initial_scan_0(ScannerName, ModuleFileName, InitialText, StateDir, UseCache),
+    {Cached, Module1} = erlide_scanner:initial_scan_0(
+        ScannerName, ModuleFileName, InitialText, StateDir, UseCache
+    ),
     {{ok, Cached}, Module1};
 do_cmd(dump_module, [], Module) ->
     {Module, Module};

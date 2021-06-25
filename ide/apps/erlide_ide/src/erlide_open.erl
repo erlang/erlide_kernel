@@ -7,18 +7,19 @@
 %%
 %% Exported Functions
 %%
--export([open/3,
-         find_first_var/2,
-         get_source_from_module/2,
-         get_external_modules/2,
-         get_external_module/2,
-         get_external_module_tree/1,
-         get_external_include/2,
-         get_external_1/3,
-         get_otp_lib_structure/1,
-         get_lib_files/1,
-         get_includes_in_dir/1
-        ]).
+-export([
+    open/3,
+    find_first_var/2,
+    get_source_from_module/2,
+    get_external_modules/2,
+    get_external_module/2,
+    get_external_module_tree/1,
+    get_external_include/2,
+    get_external_1/3,
+    get_otp_lib_structure/1,
+    get_lib_files/1,
+    get_includes_in_dir/1
+]).
 
 %% TODO (JC) there are some code duplication in external modules (and includes) handling
 
@@ -39,15 +40,19 @@
 %% API Functions
 %%
 
-open(Mod, Offset, #open_context{imports=Imports0}=Context) ->
+open(Mod, Offset, #open_context{imports = Imports0} = Context) ->
     ?D({Mod, Offset, Context}),
     Imports = erlide_util:add_auto_imported(Imports0),
     try
         {TokensWComments, BeforeReversed} =
             erlide_scanner:get_token_window(Mod, Offset, 45, 100),
         ?D({TokensWComments, BeforeReversed}),
-        try_open(Offset, TokensWComments, BeforeReversed,
-                 Context#open_context{imports=Imports}),
+        try_open(
+            Offset,
+            TokensWComments,
+            BeforeReversed,
+            Context#open_context{imports = Imports}
+        ),
         error
     catch
         throw:{open, Res} ->
@@ -58,31 +63,41 @@ open(Mod, Offset, #open_context{imports=Imports0}=Context) ->
             {error, E}
     end.
 
-get_external_include(FilePath, #open_context{externalIncludes=ExternalIncludes,
-                                             pathVars=PathVars}) ->
+get_external_include(FilePath, #open_context{
+    externalIncludes = ExternalIncludes,
+    pathVars = PathVars
+}) ->
     ?D(FilePath),
     ExtIncPaths = get_external_modules_files(ExternalIncludes, PathVars),
     get_ext_inc(ExtIncPaths, FilePath).
 
 get_otp_lib_structure(StateDir) ->
     RenewFun = fun(_) ->
-                       CodeLibs = code:get_path(),
-                       LibDir = code:lib_dir(),
-                       Libs = lists:filter(fun(N) -> lists:prefix(LibDir, N) end, CodeLibs),
-                       LibDirs = [get_lib_dir(Lib) || Lib <- lists:sort(Libs)],
-                       R = lists:map(fun(Dir) ->
-                                             SubDirs = ["src", "include"],
-                                             Group = get_app_group(Dir),
-                                             {Dir, get_dirs(SubDirs, Dir, []), Group}
-                                     end, LibDirs),
-                       ?D(R),
-                       R
-               end,
+        CodeLibs = code:get_path(),
+        LibDir = code:lib_dir(),
+        Libs = lists:filter(fun(N) -> lists:prefix(LibDir, N) end, CodeLibs),
+        LibDirs = [get_lib_dir(Lib) || Lib <- lists:sort(Libs)],
+        R = lists:map(
+            fun(Dir) ->
+                SubDirs = ["src", "include"],
+                Group = get_app_group(Dir),
+                {Dir, get_dirs(SubDirs, Dir, []), Group}
+            end,
+            LibDirs
+        ),
+        ?D(R),
+        R
+    end,
     VersionFileName = filename:join([code:root_dir()]),
     CacheName = filename:join(StateDir, "otp.structure"),
     {_Cached, R} =
-        erlide_cache:check_and_renew_cached(VersionFileName, CacheName,
-                                            ?CACHE_VERSION, RenewFun, true),
+        erlide_cache:check_and_renew_cached(
+            VersionFileName,
+            CacheName,
+            ?CACHE_VERSION,
+            RenewFun,
+            true
+        ),
     ?D(_Cached),
     {ok, R}.
 
@@ -90,8 +105,8 @@ get_app_group(Dir) ->
     case file:open(filename:join(Dir, "info"), [read]) of
         {ok, F} ->
             case file:read_line(F) of
-                {ok, "group:"++Group} ->
-                    Val = string:strip(string:strip(Group),right, $\n),
+                {ok, "group:" ++ Group} ->
+                    Val = string:strip(string:strip(Group), right, $\n),
                     case split_at_first_char($\s, Val) of
                         {[], A} ->
                             A;
@@ -101,7 +116,7 @@ get_app_group(Dir) ->
                 _ ->
                     ""
             end;
-        _->
+        _ ->
             ""
     end.
 
@@ -159,7 +174,7 @@ try_open(Offset, TokensWComments, BeforeReversedWComments, Context) ->
 
 try_open_aux(Offset, Tokens, BeforeReversed, Context) ->
     case Tokens of
-        [#token{offset=O} | _] = Tokens when O =< Offset ->
+        [#token{offset = O} | _] = Tokens when O =< Offset ->
             ?D(Tokens),
             o_tokens(Tokens, Offset, Context, BeforeReversed),
             case BeforeReversed of
@@ -178,14 +193,16 @@ has_prefix(Prefix, FileName) ->
 has_name(Name, FileName) ->
     Name == filename:rootname(filename:basename(FileName)).
 
-get_external_modules(Prefix, #open_context{externalModules=ExternalModulesFiles, pathVars=PathVars}) ->
+get_external_modules(Prefix, #open_context{
+    externalModules = ExternalModulesFiles, pathVars = PathVars
+}) ->
     ExternalModules = get_external_modules_files(ExternalModulesFiles, PathVars),
     {ok, [XM || XM <- ExternalModules, has_prefix(Prefix, XM)]}.
 
-get_external_module_tree(#open_context{externalModules=ExternalModulesFiles, pathVars=PathVars}) ->
+get_external_module_tree(#open_context{externalModules = ExternalModulesFiles, pathVars = PathVars}) ->
     {ok, get_external_module_tree(ExternalModulesFiles, PathVars)}.
 
-get_external_module(Name, #open_context{externalModules=ExternalModulesFiles, pathVars=PathVars}) ->
+get_external_module(Name, #open_context{externalModules = ExternalModulesFiles, pathVars = PathVars}) ->
     ExternalModules = get_external_modules_files(ExternalModulesFiles, PathVars),
     case [XM || XM <- ExternalModules, has_name(Name, XM)] of
         [Path | _] ->
@@ -195,27 +212,33 @@ get_external_module(Name, #open_context{externalModules=ExternalModulesFiles, pa
     end.
 
 get_external_module_tree(PackedFileNames, PathVars) ->
-    Fun = fun(Parent, FileName, Acc) -> [{Parent, replace_path_var(FileName, PathVars), module} | Acc] end,
-    Fun2 = fun(Parent, FileName, Acc) -> [{Parent, replace_path_var(FileName, PathVars), entry} | Acc] end,
+    Fun = fun(Parent, FileName, Acc) ->
+        [{Parent, replace_path_var(FileName, PathVars), module} | Acc]
+    end,
+    Fun2 = fun(Parent, FileName, Acc) ->
+        [{Parent, replace_path_var(FileName, PathVars), entry} | Acc]
+    end,
     FileNames = erlide_util:unpack(PackedFileNames),
     R = fold_externals(Fun, Fun2, FileNames, PathVars),
     R.
 
 consider_local([]) ->
     true;
-consider_local([#token{kind=':'} | _]) ->
+consider_local([#token{kind = ':'} | _]) ->
     false;
 consider_local(_) ->
     true.
 
-consider_macro_def([#token{kind=atom, value=define}, #token{kind='-'} | _]) ->
+consider_macro_def([#token{kind = atom, value = define}, #token{kind = '-'} | _]) ->
     true;
-consider_macro_def([#token{kind='('} | Rest]) ->
+consider_macro_def([#token{kind = '('} | Rest]) ->
     consider_macro_def(Rest);
 consider_macro_def(_) ->
     false.
 
-consider_record_field_ref([#token{kind='{'}, #token{kind=atom, value=Record}, #token{kind='#'} | _]) ->
+consider_record_field_ref([
+    #token{kind = '{'}, #token{kind = atom, value = Record}, #token{kind = '#'} | _
+]) ->
     {true, Record};
 consider_record_field_ref([_ | Rest]) ->
     consider_record_field_ref(Rest);
@@ -225,60 +248,118 @@ consider_record_field_ref(_) ->
 %% TODO: rewrite this with some kind of table, and make it possible to
 %% add new items, e.g. gen_server calls
 
-o_tokens([#token{kind=atom, value=include} | Rest], _, _, [#token{kind='-'} | _]) ->
+o_tokens([#token{kind = atom, value = include} | Rest], _, _, [#token{kind = '-'} | _]) ->
     o_include(Rest);
-o_tokens([#token{kind=atom, value=include_lib} | Rest], _, _, [#token{kind='-'} | _]) ->
+o_tokens([#token{kind = atom, value = include_lib} | Rest], _, _, [#token{kind = '-'} | _]) ->
     o_include_lib(Rest);
-o_tokens([#token{kind=atom, value=define} | Rest], _, _, _) ->
+o_tokens([#token{kind = atom, value = define} | Rest], _, _, _) ->
     o_macro_def(Rest);
-o_tokens([#token{kind=atom, value=record} | Rest], Offset, _, [#token{kind='-'} | _]) ->
+o_tokens([#token{kind = atom, value = record} | Rest], Offset, _, [#token{kind = '-'} | _]) ->
     o_record_def(Rest, Offset);
-o_tokens([#token{kind='#'}, #token{kind=atom, value=Value} | _] = Tokens, Offset, _, _) ->
+o_tokens([#token{kind = '#'}, #token{kind = atom, value = Value} | _] = Tokens, Offset, _, _) ->
     o_record(Tokens, Offset, Value);
-o_tokens([#token{kind='#'}, #token{kind=macro, value=Value} | _] = Tokens, Offset, _, _) ->
+o_tokens([#token{kind = '#'}, #token{kind = macro, value = Value} | _] = Tokens, Offset, _, _) ->
     o_record(Tokens, Offset, Value);
-o_tokens([#token{kind=atom, value=Module}, #token{kind=':'}, #token{kind=atom, value=Function},
-          #token{kind='/'}, #token{kind=integer, value=Arity} | _], _, Context, _) ->
+o_tokens(
+    [
+        #token{kind = atom, value = Module},
+        #token{kind = ':'},
+        #token{kind = atom, value = Function},
+        #token{kind = '/'},
+        #token{kind = integer, value = Arity}
+        | _
+    ],
+    _,
+    Context,
+    _
+) ->
     o_external(Module, Function, Arity, Context);
-o_tokens([#token{kind=atom, value=Module}, #token{kind=':'}, #token{kind=atom, value=Function} | Rest],
-         _, Context, _) ->
+o_tokens(
+    [
+        #token{kind = atom, value = Module},
+        #token{kind = ':'},
+        #token{kind = atom, value = Function}
+        | Rest
+    ],
+    _,
+    Context,
+    _
+) ->
     o_external(Module, Function, Rest, Context);
-o_tokens([#token{kind=macro, value=Module}, #token{kind=':'}, #token{kind=atom, value=Function} | Rest],
-         _, Context, _) ->
+o_tokens(
+    [
+        #token{kind = macro, value = Module},
+        #token{kind = ':'},
+        #token{kind = atom, value = Function}
+        | Rest
+    ],
+    _,
+    Context,
+    _
+) ->
     o_external(Module, Function, Rest, Context);
-o_tokens([#token{kind=atom, value=Function}, #token{kind='/'}, #token{kind=integer, value=Arity} | _],
-         _, Context, [#token{kind=':'}, #token{kind=atom, value=Module} | _]) ->
+o_tokens(
+    [
+        #token{kind = atom, value = Function},
+        #token{kind = '/'},
+        #token{kind = integer, value = Arity}
+        | _
+    ],
+    _,
+    Context,
+    [#token{kind = ':'}, #token{kind = atom, value = Module} | _]
+) ->
     o_external(Module, Function, Arity, Context);
-o_tokens([#token{kind=atom, value=Function}, #token{kind='/'}, #token{kind=integer, value=Arity} | _],
-         _, Context, _BeforeReversed) ->
+o_tokens(
+    [
+        #token{kind = atom, value = Function},
+        #token{kind = '/'},
+        #token{kind = integer, value = Arity}
+        | _
+    ],
+    _,
+    Context,
+    _BeforeReversed
+) ->
     o_local(Function, Arity, Context);
-o_tokens([#token{kind='/'}, #token{kind=integer, value=Arity} | _],
-         _, Context, [#token{kind=atom, value=Function} | _]) ->
+o_tokens(
+    [#token{kind = '/'}, #token{kind = integer, value = Arity} | _],
+    _,
+    Context,
+    [#token{kind = atom, value = Function} | _]
+) ->
     o_local(Function, Arity, Context);
-o_tokens([#token{kind=atom, value=Value} | _] = Tokens, Offset, _, [#token{kind='#'} | _]) ->
+o_tokens([#token{kind = atom, value = Value} | _] = Tokens, Offset, _, [#token{kind = '#'} | _]) ->
     o_record(Tokens, Offset, Value);
-o_tokens([#token{kind=macro, value=Value} | _] = Tokens, Offset, _, [#token{kind='#'} | _]) ->
+o_tokens([#token{kind = macro, value = Value} | _] = Tokens, Offset, _, [#token{kind = '#'} | _]) ->
     o_record(Tokens, Offset, Value);
-o_tokens([#token{kind=macro, value=Value} | _], _, _, _) ->
+o_tokens([#token{kind = macro, value = Value} | _], _, _, _) ->
     o_macro(Value);
-o_tokens([#token{kind=atom, value=Function}, #token{kind='('} | Rest],
-         _, Context, BeforeReversed) ->
+o_tokens(
+    [#token{kind = atom, value = Function}, #token{kind = '('} | Rest],
+    _,
+    Context,
+    BeforeReversed
+) ->
     case consider_local(BeforeReversed) of
         true ->
             ?D(Rest),
-            o_local(Function, erlide_text:guess_arity(Rest),
-                    Context);
+            o_local(
+                Function,
+                erlide_text:guess_arity(Rest),
+                Context
+            );
         false ->
             continue
     end;
-o_tokens([#token{kind=atom, value=Value} | _], _Offset, _, BeforeReversed) ->
+o_tokens([#token{kind = atom, value = Value} | _], _Offset, _, BeforeReversed) ->
     case consider_record_field_ref(BeforeReversed) of
         {true, Record} ->
             throw({open, {field, Record, Value}});
         false ->
             no
     end;
-o_tokens([#token{kind=var, value=VarName} | _], _, _, BeforeReversed) ->
+o_tokens([#token{kind = var, value = VarName} | _], _, _, BeforeReversed) ->
     case consider_macro_def(BeforeReversed) of
         true ->
             throw({open, {macro_def, VarName}});
@@ -288,12 +369,12 @@ o_tokens([#token{kind=var, value=VarName} | _], _, _, BeforeReversed) ->
 o_tokens(_, _, _, _) ->
     no.
 
-o_include([#token{kind='('}, #token{kind=string, value=File} | _]) ->
+o_include([#token{kind = '('}, #token{kind = string, value = File} | _]) ->
     throw({open, {include, File}});
 o_include(_) ->
     no.
 
-o_include_lib([#token{kind='('}, #token{kind=string, value=Path} | _]) ->
+o_include_lib([#token{kind = '('}, #token{kind = string, value = Path} | _]) ->
     ?D(Path),
     IncludeLib = get_otp_include_lib(Path),
     throw({open, IncludeLib});
@@ -303,9 +384,9 @@ o_include_lib(_) ->
 o_macro(Value) ->
     throw({open, {macro, Value}}).
 
-o_macro_def([#token{kind='('}, #token{kind=var, value=Value} | _]) ->
+o_macro_def([#token{kind = '('}, #token{kind = var, value = Value} | _]) ->
     throw({open, {macro, Value}});
-o_macro_def([#token{kind='('}, #token{kind=atom, value=Value} | _]) ->
+o_macro_def([#token{kind = '('}, #token{kind = atom, value = Value} | _]) ->
     throw({open, {macro, Value}}).
 
 o_record(Tokens, Offset, Value) ->
@@ -319,28 +400,41 @@ o_record(Tokens, Offset, Value) ->
         _ -> throw({open, {record, Value}})
     end.
 
-upto_offset([#token{offset=O, length=L}=T | Rest], Offset) when Offset>=O+L ->
+upto_offset([#token{offset = O, length = L} = T | Rest], Offset) when Offset >= O + L ->
     [T | upto_offset(Rest, Offset)];
 upto_offset([], _) ->
     [];
 upto_offset([T | _], _) ->
     [T].
 
-o_record_def([#token{kind='('}, #token{value=Value, offset=O, length=L}, #token{kind=','} | _Tokens], Offset)
-  when Offset=<O+L ->
+o_record_def(
+    [
+        #token{kind = '('},
+        #token{value = Value, offset = O, length = L},
+        #token{kind = ','}
+        | _Tokens
+    ],
+    Offset
+) when
+    Offset =< O + L
+->
     throw({open, {record, Value}});
-o_record_def([#token{kind='('}, #token{value=Value}, #token{kind=','} | Tokens], Offset) ->
+o_record_def([#token{kind = '('}, #token{value = Value}, #token{kind = ','} | Tokens], Offset) ->
     Between = erlide_np_util:get_between_outer_pars(Tokens, '{', '}'),
     o_record_def_aux(Between, Offset, Value, want_field).
 
 o_record_def_aux([], _Offset, Record, _) ->
     throw({open, {record, Record}});
-o_record_def_aux([#token{offset=O, length=L, value=Field} | _], Offset, Record, want_field) when Offset<O+L ->
+o_record_def_aux(
+    [#token{offset = O, length = L, value = Field} | _], Offset, Record, want_field
+) when Offset < O + L ->
     throw({open, {field, Record, Field}});
-o_record_def_aux([#token{value=V} | _]=Tokens, Offset, Record, _) when V=:='('; V=:='{'; V=:='['; V=:='<<' ->
+o_record_def_aux([#token{value = V} | _] = Tokens, Offset, Record, _) when
+    V =:= '('; V =:= '{'; V =:= '['; V =:= '<<'
+->
     Rest = erlide_text:skip_expr(Tokens),
     o_record_def_aux(Rest, Offset, Record, want_comma);
-o_record_def_aux([#token{value=','} | Rest], Offset, Record, want_comma) ->
+o_record_def_aux([#token{value = ','} | Rest], Offset, Record, want_comma) ->
     o_record_def_aux(Rest, Offset, Record, want_field);
 o_record_def_aux([_ | Rest], Offset, Record, W) ->
     o_record_def_aux(Rest, Offset, Record, W).
@@ -356,7 +450,7 @@ o_external(Module, Function, Arity, Context) when is_integer(Arity) ->
     P = get_source_from_module(Module, Context),
     throw({open, {external, Module, Function, Arity, P}}).
 
-o_local(Function, Arity, #open_context{imports=Imports}=Context) ->
+o_local(Function, Arity, #open_context{imports = Imports} = Context) ->
     case get_imported(Imports, {Function, Arity}) of
         false ->
             throw({open, {local, Function, Arity}});
@@ -389,8 +483,12 @@ get_source_from_module(Mod, Context) ->
     case catch get_source(Mod) of
         {'EXIT', _E} ->
             ?D({get_source, _E}),
-            case catch select_external(get_erl_from_dirs(Context#open_context.extraSourcePaths),
-                                       atom_to_list(Mod)) of
+            case
+                catch select_external(
+                    get_erl_from_dirs(Context#open_context.extraSourcePaths),
+                    atom_to_list(Mod)
+                )
+            of
                 Path when is_list(Path) ->
                     Path;
                 _ ->
@@ -430,17 +528,18 @@ replace_path_var_aux(Var, PathVars) ->
 
 get_external_1(FileName0, PathVars, IsRoot) ->
     FileName = replace_path_var(FileName0, PathVars),
-    FileNames = case IsRoot orelse filename:extension(FileName) == ".erlidex" of
-                    true ->
-                        case file:read_file(FileName) of
-                            {ok, B} ->
-                                erlide_util:split_lines(B);
-                            _ ->
-                                [FileName]
-                        end;
-                    false ->
+    FileNames =
+        case IsRoot orelse filename:extension(FileName) == ".erlidex" of
+            true ->
+                case file:read_file(FileName) of
+                    {ok, B} ->
+                        erlide_util:split_lines(B);
+                    _ ->
                         [FileName]
-                end,
+                end;
+            false ->
+                [FileName]
+        end,
     R = replace_path_vars(FileNames, PathVars),
     {ok, R}.
 
@@ -456,7 +555,7 @@ fx([FN0 | Rest], Fun, Fun2, PathVars, Parent, Done, Acc) ->
         true ->
             fx(Rest, Fun, Fun2, PathVars, Parent, Done, Acc);
         false ->
-            case Parent=:="root" orelse filename:extension(FN) == ".erlidex" of
+            case Parent =:= "root" orelse filename:extension(FN) == ".erlidex" of
                 true ->
                     {NewDone, NewAcc} = fx2(FN, Fun, Fun2, PathVars, Parent, Done, Acc),
                     fx(Rest, Fun, Fun2, PathVars, Parent, NewDone, NewAcc);
@@ -475,9 +574,14 @@ fx2(FN, Fun, Fun2, PathVars, Parent, Done, Acc) ->
             {Done, Acc}
     end.
 
-get_source_from_external_modules(Mod, #open_context{externalModules=ExternalModules,
-                                                    pathVars=PathVars,
-                                                    extraSourcePaths=ExtraSources}=_Context) ->
+get_source_from_external_modules(
+    Mod,
+    #open_context{
+        externalModules = ExternalModules,
+        pathVars = PathVars,
+        extraSourcePaths = ExtraSources
+    } = _Context
+) ->
     ?D(_Context),
     L = get_external_modules_files(ExternalModules, PathVars),
     %%?D(lists:flatten(io_lib:format(">> ~p~n", [L]))),
@@ -502,13 +606,15 @@ get_erl_from_dirs(undefined) ->
     [];
 get_erl_from_dirs(L) ->
     ?D({get_erl_from_dirs, L}),
-    lists:flatmap(fun(X) -> get_erl_from_dir(X) end,
-                  L).
+    lists:flatmap(
+        fun(X) -> get_erl_from_dir(X) end,
+        L
+    ).
 
 get_erl_from_dir(D) ->
     case file:list_dir(D) of
         {ok, Fs} ->
-            [filename:join(D, F) || F<-Fs, filename:extension(F)==".erl"];
+            [filename:join(D, F) || F <- Fs, filename:extension(F) == ".erl"];
         _ ->
             []
     end.

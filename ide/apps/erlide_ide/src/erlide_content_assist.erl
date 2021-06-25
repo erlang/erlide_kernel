@@ -15,7 +15,6 @@
 -include_lib("erlide_common/include/erlide_dbglog.hrl").
 -include_lib("erlide_ide_core/include/erlide_token.hrl").
 
-
 %%
 %% Exported Functions
 %%
@@ -24,7 +23,6 @@
 %%
 %% API Functions
 %%
-
 
 %% check if the text is where to enter record field
 check_record(S) ->
@@ -52,7 +50,6 @@ get_variables(Src, Prefix) ->
 %% final OtpErlangObject res = b.rpcx("erlide_content_assist",
 %% "get_variables", "ss", src, prefix);
 
-
 %%
 %% Local Functions
 %%
@@ -62,11 +59,11 @@ get_var_tokens(Tokens, Prefix) ->
 
 get_var_tokens([], _Prefix, Acc) ->
     Acc;
-get_var_tokens([#token{kind='?'}, #token{kind=var} | Rest], Prefix, Acc) ->
+get_var_tokens([#token{kind = '?'}, #token{kind = var} | Rest], Prefix, Acc) ->
     get_var_tokens(Rest, Prefix, Acc);
-get_var_tokens([#token{kind='#'}, #token{kind=var} | Rest], Prefix, Acc) ->
+get_var_tokens([#token{kind = '#'}, #token{kind = var} | Rest], Prefix, Acc) ->
     get_var_tokens(Rest, Prefix, Acc);
-get_var_tokens([#token{kind=var, value=Value} | Rest], Prefix, Acc) ->
+get_var_tokens([#token{kind = var, value = Value} | Rest], Prefix, Acc) ->
     S = atom_to_list(Value),
     case S of
         "_" ->
@@ -87,7 +84,7 @@ get_var_tokens([_ | Rest], Prefix, Acc) ->
 -define(RECORD_FIELD, 2).
 
 check_record_tokens(Tokens) ->
-    ?D({">>",Tokens}),
+    ?D({">>", Tokens}),
     case check_record_tokens(no_record, Tokens, false, '', '<>', [], '') of
         L when is_list(L) ->
             check_record_tokens(L);
@@ -124,30 +121,53 @@ state_to_num(_) -> ?NO_RECORD.
 
 check_record_tokens(State, [], _W, R, B, Fields, _PrevR) ->
     {State, R, B, Fields};
-check_record_tokens(_State, [#token{kind='}'} | Rest], _W, _R, _B, _Fields, _PrevR) ->
+check_record_tokens(_State, [#token{kind = '}'} | Rest], _W, _R, _B, _Fields, _PrevR) ->
     ?D('}'),
-    Rest; %% either we've recursed, or we left the record, so this is safe
-check_record_tokens(_State, [#token{kind='#'} | Rest], W, _R, _B, _Fields, PrevR) -> % 1
+    %% either we've recursed, or we left the record, so this is safe
+    Rest;
+% 1
+check_record_tokens(_State, [#token{kind = '#'} | Rest], W, _R, _B, _Fields, PrevR) ->
     check_record_tokens(record_want_name, Rest, W, '', '<>', [], PrevR);
-check_record_tokens(record_want_name, [#token{kind=atom, value=''} | Rest], W, R, _B, Fields, _PrevR) -> % 2
+% 2
+check_record_tokens(
+    record_want_name, [#token{kind = atom, value = ''} | Rest], W, R, _B, Fields, _PrevR
+) ->
     ?D('><'),
     check_record_tokens(record_name, Rest, W, '><', '><', Fields, R);
-check_record_tokens(record_want_name, [#token{kind=atom, value=V} | Rest], W, R, _B, Fields, _PrevR) -> % 2
+% 2
+check_record_tokens(
+    record_want_name, [#token{kind = atom, value = V} | Rest], W, R, _B, Fields, _PrevR
+) ->
     ?D(V),
     check_record_tokens(record_name, Rest, W, V, V, Fields, R);
-check_record_tokens(record_want_name, [#token{kind=macro, value=V} | Rest], W, R, _B, _Fields, _PrevR) -> % 2
+% 2
+check_record_tokens(
+    record_want_name, [#token{kind = macro, value = V} | Rest], W, R, _B, _Fields, _PrevR
+) ->
     ?D({V, Rest}),
     check_record_tokens(record_name, Rest, W, V, V, [], R);
-check_record_tokens(record_want_name, [#token{kind='?'} | Rest], W, R, _B, _Fields, _PrevR) -> % 2
+% 2
+check_record_tokens(record_want_name, [#token{kind = '?'} | Rest], W, R, _B, _Fields, _PrevR) ->
     ?D(Rest),
     check_record_tokens(record_name, Rest, W, '?', '?', [], R);
-check_record_tokens(record_name, [#token{kind=Dot} | Rest], W, _R, B, _Fields, PrevR) % 3
-  when Dot=:='.'; Dot=:=dot ->
+% 3
+check_record_tokens(record_name, [#token{kind = Dot} | Rest], W, _R, B, _Fields, PrevR) when
+    Dot =:= '.'; Dot =:= dot
+->
     check_record_tokens(record_want_dot_field, Rest, W, B, '<>', [], PrevR);
-check_record_tokens(record_want_dot_field, [#token{kind=atom, value=V} | Rest],
-                    W, R, _B, _Fields, PrevR) -> % 4
+check_record_tokens(
+    record_want_dot_field,
+    [#token{kind = atom, value = V} | Rest],
+    % 4
+    W,
+    R,
+    _B,
+    _Fields,
+    PrevR
+) ->
     check_record_tokens(record_dot_field, Rest, W, R, V, [], PrevR);
-check_record_tokens(record_name, [#token{kind='{'} | Rest], W, _R, B, _Fields, PrevR) -> % 5
+% 5
+check_record_tokens(record_name, [#token{kind = '{'} | Rest], W, _R, B, _Fields, PrevR) ->
     ?D('{'),
     ?D({W, _R, B}),
     case check_record_tokens(record_want_field, Rest, true, B, '<>', [], B) of
@@ -158,7 +178,8 @@ check_record_tokens(record_name, [#token{kind='{'} | Rest], W, _R, B, _Fields, P
             ?D(T),
             T
     end;
-check_record_tokens(State, [#token{kind='{'} | Rest], W, R, B, _Fields, PrevR) -> % 6
+% 6
+check_record_tokens(State, [#token{kind = '{'} | Rest], W, R, B, _Fields, PrevR) ->
     ?D('{'),
     case check_record_tokens(no_record, Rest, false, B, '<>', [], B) of
         L when is_list(L) ->
@@ -168,18 +189,23 @@ check_record_tokens(State, [#token{kind='{'} | Rest], W, R, B, _Fields, PrevR) -
             ?D(T),
             T
     end;
-check_record_tokens(record_want_field, [#token{kind=atom, value=V} | Rest], W, R, _B, Fields, PrevR) -> % 7
+% 7
+check_record_tokens(
+    record_want_field, [#token{kind = atom, value = V} | Rest], W, R, _B, Fields, PrevR
+) ->
     check_record_tokens(record_field, Rest, W, R, V, [V | Fields], PrevR);
-check_record_tokens(no_record, [#token{kind=','} | Rest], true, R, _B, Fields, PrevR) -> % 8
+% 8
+check_record_tokens(no_record, [#token{kind = ','} | Rest], true, R, _B, Fields, PrevR) ->
     check_record_tokens(record_want_field, Rest, true, R, '', Fields, PrevR);
-check_record_tokens(record_field, [#token{kind=','} | Rest], true, R, _B, Fields, PrevR) -> % 8b
+% 8b
+check_record_tokens(record_field, [#token{kind = ','} | Rest], true, R, _B, Fields, PrevR) ->
     check_record_tokens(record_want_field, Rest, true, R, '', Fields, PrevR);
-check_record_tokens(record_field, [#token{kind='='} | Rest], W, R, _B, Fields, PrevR) -> % 9
+% 9
+check_record_tokens(record_field, [#token{kind = '='} | Rest], W, R, _B, Fields, PrevR) ->
     check_record_tokens(no_record, Rest, W, R, '', Fields, PrevR);
-check_record_tokens(_State, [_ | Rest], W, R, B, Fields, PrevR) -> % 10
+% 10
+check_record_tokens(_State, [_ | Rest], W, R, B, Fields, PrevR) ->
     check_record_tokens(no_record, Rest, W, R, B, Fields, PrevR).
 
 get_function_head(Fun, Arity) ->
     erlide_otp_doc:fix_proposals([{Fun, Arity}], [""], 0).
-
-

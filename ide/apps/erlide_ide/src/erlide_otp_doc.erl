@@ -3,13 +3,15 @@
 
 -module(erlide_otp_doc).
 
--export([get_doc/3,
-         get_doc_from_fun_arity_list/3,
-         get_all_links_to_other/0,
-         get_exported/2,
-         get_modules/3,
-         get_proposals/3,
-         get_all_doc_dirs/0]).
+-export([
+    get_doc/3,
+    get_doc_from_fun_arity_list/3,
+    get_all_links_to_other/0,
+    get_exported/2,
+    get_modules/3,
+    get_proposals/3,
+    get_all_doc_dirs/0
+]).
 
 -export([fix_proposals/3]).
 
@@ -29,9 +31,12 @@
 get_exported(M, Prefix) when is_atom(M), is_list(Prefix) ->
     case catch M:module_info(exports) of
         Val when is_list(Val) ->
-            lists:filter(fun({N,_A}) ->
-                                 lists:prefix(Prefix,atom_to_list(N))
-                         end, Val);
+            lists:filter(
+                fun({N, _A}) ->
+                    lists:prefix(Prefix, atom_to_list(N))
+                end,
+                Val
+            );
         _Error ->
             ?D(_Error),
             error
@@ -43,8 +48,8 @@ get_modules(Prefix, Modules, modules) ->
     LoadedModules = [atom_to_list(I) || {I, _} <- code:all_loaded()],
     get_modules(Prefix, Modules ++ LoadedModules).
 
-get_modules([C|_]=Prefix, Modules) when C>=$A, C=<$Z ->
-    get_modules("'"++Prefix, Modules);
+get_modules([C | _] = Prefix, Modules) when C >= $A, C =< $Z ->
+    get_modules("'" ++ Prefix, Modules);
 get_modules(Prefix, Modules) when is_list(Prefix), is_list(Modules) ->
     L = [strip_quotes(I) || I <- Modules, lists:prefix(Prefix, I)],
     lists:usort(L).
@@ -52,8 +57,8 @@ get_modules(Prefix, Modules) when is_list(Prefix), is_list(Modules) ->
 find_tags(L, Fun) ->
     lists:filter(Fun, L).
 
-strip_quotes("'"++Rest) ->
-    string:sub_string(Rest, 1, length(Rest)-1);
+strip_quotes("'" ++ Rest) ->
+    string:sub_string(Rest, 1, length(Rest) - 1);
 strip_quotes(S) ->
     S.
 
@@ -73,7 +78,8 @@ is_a_slash_name_or_div_tag({_TagType, T, _Attrs, _Offset} = Tag) ->
 
 extract_from_file(F) ->
     {ok, B} = file:read_file(F),
-    P = scan(B), %% tags_to_tuples(B),
+    %% tags_to_tuples(B),
+    P = scan(B),
     E = find_tags(P, fun(Tag) -> is_a_slash_name_or_div_tag(Tag) end),
     T = get_functions_with_offsets(E),
     T.
@@ -85,21 +91,50 @@ get_functions_with_offsets(E) ->
     get_functions_with_offsets(E, [], 0, false, []).
 
 get_functions_with_offsets([], [], _, _, Acc) ->
-    lists:reverse(Acc); % done, return it
+    % done, return it
+    lists:reverse(Acc);
 get_functions_with_offsets([], Functions, Offset, _, Acc) ->
-    get_functions_with_offsets([], [], Offset, true,
-                               [{lists:reverse(Functions), Offset, 1000000} | Acc]);
-get_functions_with_offsets([{_TagType, "a", Attrs, Offs} | Rest],
-                           [], _, _, Acc) -> % first func in first group, keep offset
+    get_functions_with_offsets(
+        [],
+        [],
+        Offset,
+        true,
+        [{lists:reverse(Functions), Offset, 1000000} | Acc]
+    );
+get_functions_with_offsets(
+    [{_TagType, "a", Attrs, Offs} | Rest],
+    % first func in first group, keep offset
+    [],
+    _,
+    _,
+    Acc
+) ->
     F = attrs_to_fn(Attrs),
     get_functions_with_offsets(Rest, [F], Offs, false, Acc);
-get_functions_with_offsets([{_TagType, "a", Attrs, Offs} | Rest],
-                           Functions, Offset, true, Acc) ->
-    F = attrs_to_fn(Attrs), % first func in new group, keep offset, save old
-    get_functions_with_offsets(Rest, [F], Offs, false,
-                               [{lists:reverse(Functions), Offset, Offs - Offset} | Acc]);
-get_functions_with_offsets([{_TagType, "a", Attrs, _} | Rest],
-                           Functions, Offset, _, Acc) -> % func in group, add to functions
+get_functions_with_offsets(
+    [{_TagType, "a", Attrs, Offs} | Rest],
+    Functions,
+    Offset,
+    true,
+    Acc
+) ->
+    % first func in new group, keep offset, save old
+    F = attrs_to_fn(Attrs),
+    get_functions_with_offsets(
+        Rest,
+        [F],
+        Offs,
+        false,
+        [{lists:reverse(Functions), Offset, Offs - Offset} | Acc]
+    );
+get_functions_with_offsets(
+    [{_TagType, "a", Attrs, _} | Rest],
+    % func in group, add to functions
+    Functions,
+    Offset,
+    _,
+    Acc
+) ->
     F = attrs_to_fn(Attrs),
     get_functions_with_offsets(Rest, [F | Functions], Offset, false, Acc);
 get_functions_with_offsets([_ | Rest], Functions, Offset, _, Acc) ->
@@ -108,9 +143,9 @@ get_functions_with_offsets([_ | Rest], Functions, Offset, _, Acc) ->
 %% check for slash in name attribute, or minus, since edoc
 %% of some reason uses minus in anchor tags instead of slash
 %%
-is_a_slash_name_tag({_TagType, "a", ["NAME=" ++ Name | _ ], _}) ->
+is_a_slash_name_tag({_TagType, "a", ["NAME=" ++ Name | _], _}) ->
     is_slash_int(Name);
-is_a_slash_name_tag({_TagType, "a", ["name=" ++ Name | _ ], _}) ->
+is_a_slash_name_tag({_TagType, "a", ["name=" ++ Name | _], _}) ->
     is_slash_int(Name);
 is_a_slash_name_tag(_) ->
     false.
@@ -133,14 +168,14 @@ is_slash_int(Name) ->
 %% if a string contains : remove all upto and including :
 %% "mod:fun" -> "fun"
 remove_module(A) ->
-    string:substr(A, string:rchr(A, $:)+1).
+    string:substr(A, string:rchr(A, $:) + 1).
 
 %% convert name attribute (as first element in list) to
 %% a {Function, Arity} tuple
 %%
-attrs_to_fn(["NAME=" ++ Name | _ ]) ->
+attrs_to_fn(["NAME=" ++ Name | _]) ->
     attrs_to_fn_x(Name);
-attrs_to_fn(["name=" ++ Name | _ ]) ->
+attrs_to_fn(["name=" ++ Name | _]) ->
     attrs_to_fn_x(Name).
 
 attrs_to_fn_x(Name0) ->
@@ -159,44 +194,50 @@ scan(S) when is_list(S) ->
 scan(B) when is_binary(B) ->
     scan(binary_to_list(B)).
 
-scan([$< | Rest0], I, Acc) -> % tag start, scan tag
+% tag start, scan tag
+scan([$< | Rest0], I, Acc) ->
     {ok, Rest1, Tag, D} = scan_tag(Rest0, 0, ""),
-    scan(Rest1, I+D+1, [{Tag, I} | Acc]);
-scan([_ | Rest], I, Acc) -> % just text w/o tag, skip
-    scan(Rest, I+1, Acc);
-scan([], _I, Acc) -> % done, let's split tags on attribute
-    lists:map(fun({Tag, Offset}) ->
-                      split_tag(Tag, Offset)
-              end, lists:reverse(Acc)).
+    scan(Rest1, I + D + 1, [{Tag, I} | Acc]);
+% just text w/o tag, skip
+scan([_ | Rest], I, Acc) ->
+    scan(Rest, I + 1, Acc);
+% done, let's split tags on attribute
+scan([], _I, Acc) ->
+    lists:map(
+        fun({Tag, Offset}) ->
+            split_tag(Tag, Offset)
+        end,
+        lists:reverse(Acc)
+    ).
 
 %% scan tag to end of tag, considering / and !
 scan_tag([$! | S], I0, Acc) ->
-    {Rest, Tag, I1} = scan_s(S, $>, I0+1, Acc),
+    {Rest, Tag, I1} = scan_s(S, $>, I0 + 1, Acc),
     {ok, Rest, {comment_tag, Tag}, I1};
 scan_tag([$/ | S], I0, Acc) ->
-    {Rest, Tag, I1} = scan_s(S, $>, I0+1, Acc),
+    {Rest, Tag, I1} = scan_s(S, $>, I0 + 1, Acc),
     {ok, Rest, {end_tag, Tag}, I1};
 scan_tag(S, I0, Acc) ->
     {Rest, Tag, I1} = scan_s(S, $>, I0, Acc),
     {ok, Rest, {tag, Tag}, I1}.
 
 scan_s([End, End | Rest], End, I, Acc) ->
-    scan_s([End | Rest], End, I+1, Acc);
+    scan_s([End | Rest], End, I + 1, Acc);
 scan_s([End | Rest], End, I, Acc) ->
-    {Rest, lists:reverse(Acc), I+1};
+    {Rest, lists:reverse(Acc), I + 1};
 scan_s([$\\, C | Rest], End, I, Acc) ->
-    scan_s(Rest, End, I+2, [C | Acc]);
+    scan_s(Rest, End, I + 2, [C | Acc]);
 scan_s([34 | Rest0], End, I, Acc) ->
     {Rest1, S, D} = scan_s(Rest0, 34, 0, ""),
-    scan_s(Rest1, End, I+D+1, "\"" ++ lists:reverse(S) ++ "\"" ++ Acc);
+    scan_s(Rest1, End, I + D + 1, "\"" ++ lists:reverse(S) ++ "\"" ++ Acc);
 scan_s([A | Rest], End, I, Acc) ->
-    scan_s(Rest, End, I+1, [A | Acc]);
+    scan_s(Rest, End, I + 1, [A | Acc]);
 scan_s([], _End, I, Acc) ->
     {"", lists:reverse(Acc), I}.
 
 %% split tag string to tag tuple with attribute list
 split_tag({TagType, S}, Offset) ->
-    {Rest, Tag, _} = scan_s(S, $  , 0, ""),
+    {Rest, Tag, _} = scan_s(S, $\s, 0, ""),
     {Tag, Attrs} = split_tag(Rest, Tag, []),
     LTag = string:to_lower(Tag),
     {tag_type(TagType, LTag), LTag, Attrs, Offset}.
@@ -204,7 +245,7 @@ split_tag({TagType, S}, Offset) ->
 split_tag("", Tag, Acc) ->
     {Tag, lists:reverse(Acc)};
 split_tag(S, Tag, Acc) ->
-    {Rest, R, _} = scan_s(S, $  , 0, ""),
+    {Rest, R, _} = scan_s(S, $\s, 0, ""),
     split_tag(Rest, Tag, [R | Acc]).
 
 %% convert list of tags to hierarchy, grouping begin_tag and end_tag
@@ -243,17 +284,23 @@ split_tag(S, Tag, Acc) ->
 
 %% return begin_tag if this is a tag that requires a slash-tag
 %% otherwise return tag
-tag_type(tag, "p") -> tag;
-tag_type(tag, "br") -> tag;
-tag_type(tag, "hr") -> tag;
-tag_type(tag, "img") -> tag;
-tag_type(tag, "link") -> tag;
+tag_type(tag, "p") ->
+    tag;
+tag_type(tag, "br") ->
+    tag;
+tag_type(tag, "hr") ->
+    tag;
+tag_type(tag, "img") ->
+    tag;
+tag_type(tag, "link") ->
+    tag;
 tag_type(tag, Tag) ->
     case lists:last(Tag) of
         $/ -> tag;
         _ -> begin_tag
     end;
-tag_type(T, _) -> T.
+tag_type(T, _) ->
+    T.
 
 listify(A) when is_atom(A) ->
     atom_to_list(A);
@@ -295,7 +342,7 @@ hack_erts_bad_doc_location(BeamFile) ->
     Dir1 = filename:basename(Dir0),
     ?D(Dir1),
     case Dir1 of
-        "erts"++_ ->
+        "erts" ++ _ ->
             filename:join([filename:dirname(filename:dirname(Dir0)), Dir1]);
         _ ->
             Dir0
@@ -307,12 +354,13 @@ extract_doc_for_func(Doc, Func) ->
 extract_doc_for_func([], _, Acc) ->
     lists:reverse(Acc);
 extract_doc_for_func([{Funcs, Pos, Len} | Rest], Func, Acc0) ->
-    Acc1 = case has_func(Funcs, Func) of
-               true ->
-                   [{Pos, Len} | Acc0];
-               false ->
-                   Acc0
-           end,
+    Acc1 =
+        case has_func(Funcs, Func) of
+            true ->
+                [{Pos, Len} | Acc0];
+            false ->
+                Acc0
+        end,
     extract_doc_for_func(Rest, Func, Acc1).
 
 extract_doc_for_funcs(Doc, FuncList) ->
@@ -327,17 +375,22 @@ has_func([{F, _} | _], {F, -1}) ->
 has_func([_ | Rest], Func) ->
     has_func(Rest, Func).
 
-
 get_all_doc_dirs() ->
     Paths = code:get_path(),
-    OtpPaths = lists:filter(fun(Path) ->
-                                    string:str(Path, "otp") =/= 0
-                            end, Paths),
-    Dirs0 = lists:map(fun(D) ->
-                              ModDir = filename:dirname(D),
-                              {filename:join([ModDir, "doc", "html"]), D}
-                      end, OtpPaths),
-    lists:filter(fun({D,_}) -> filelib:is_dir(D) end, Dirs0).
+    OtpPaths = lists:filter(
+        fun(Path) ->
+            string:str(Path, "otp") =/= 0
+        end,
+        Paths
+    ),
+    Dirs0 = lists:map(
+        fun(D) ->
+            ModDir = filename:dirname(D),
+            {filename:join([ModDir, "doc", "html"]), D}
+        end,
+        OtpPaths
+    ),
+    lists:filter(fun({D, _}) -> filelib:is_dir(D) end, Dirs0).
 
 %% remove_ext(F) ->
 %%     remove_ext_x(lists:reverse(F)).
@@ -441,20 +494,26 @@ get_doc_for_external(StateDir, Mod, FuncList) ->
         OutDir = get_doc_dir(Module),
         ?D(OutDir),
         DocFileName = filename:join(OutDir, Module ++ ".html"),
-        IndexFileName = filename:join([StateDir, "erlide_doc",
-                                       Module ++ ".doc"]),
+        IndexFileName = filename:join([
+            StateDir,
+            "erlide_doc",
+            Module ++ ".doc"
+        ]),
         filelib:ensure_dir(IndexFileName),
         Renew = fun(F) -> extract_from_file(F) end,
         ?D({DocFileName, IndexFileName, Renew}),
-        {_Cached, Doc} = erlide_cache:check_and_renew_cached(DocFileName, IndexFileName, ?CACHE_VERSION, Renew, true),
+        {_Cached, Doc} = erlide_cache:check_and_renew_cached(
+            DocFileName, IndexFileName, ?CACHE_VERSION, Renew, true
+        ),
         ?D({doc, _Cached, Doc, FuncList}),
         PosLens = extract_doc_for_funcs(Doc, FuncList),
-        Anchor = case FuncList of
-                     [{F, A}] ->
-                         atom_to_list(F) ++ "-" ++ integer_to_list(A);
-                     _ ->
-                         ""
-                 end,
+        Anchor =
+            case FuncList of
+                [{F, A}] ->
+                    atom_to_list(F) ++ "-" ++ integer_to_list(A);
+                _ ->
+                    ""
+            end,
         {get_doc(DocFileName, PosLens), DocFileName, Anchor}
     catch
         exit:E ->
@@ -492,25 +551,26 @@ get_sublist([], Flat, Acc) ->
 get_sublist([_ | Rest], [F | FRest], Acc) ->
     get_sublist(Rest, FRest, [F | Acc]).
 
-
 %% Get exported functions with documentation
 %% [{FunWithArity, FunWithParameters, [{Offset, Length}, Doc]}]
 
 get_proposals(Mod0, Prefix, StateDir) ->
-    {Mod, Functions} = case Mod0 of
-                           '<auto_imported>' ->
-                               {erlang, erlide_util:get_auto_imported(Prefix)};
-                           _ ->
-                               {Mod0, get_exported(Mod0, Prefix)}
-                       end,
+    {Mod, Functions} =
+        case Mod0 of
+            '<auto_imported>' ->
+                {erlang, erlide_util:get_auto_imported(Prefix)};
+            _ ->
+                {Mod0, get_exported(Mod0, Prefix)}
+        end,
     case Functions of
         L when is_list(L) ->
-            DocList = case get_doc_from_fun_arity_list(Mod, L, StateDir) of
-                          S when is_list(S) ->
-                              S;
-                          _ ->
-                              lists:duplicate(length(L), "")
-                      end,
+            DocList =
+                case get_doc_from_fun_arity_list(Mod, L, StateDir) of
+                    S when is_list(S) ->
+                        S;
+                    _ ->
+                        lists:duplicate(length(L), "")
+                end,
             fix_proposals(L, DocList, length(Prefix));
         Error ->
             Error
@@ -524,20 +584,24 @@ fix_proposals([], _, _, Acc) ->
     lists:reverse(Acc);
 fix_proposals([{FunctionName, Arity} | FALRest], [Doc | DLRest], PrefixLength, Acc) ->
     FunName = atom_to_list(FunctionName),
-    FunWithArity = FunName++"/"++integer_to_list(Arity),
-    Offset = length(FunName)+1-PrefixLength,
+    FunWithArity = FunName ++ "/" ++ integer_to_list(Arity),
+    Offset = length(FunName) + 1 - PrefixLength,
     {TextPars, Pars} = extract_pars(FunctionName, Arity, Offset, Doc),
     ?D(TextPars),
     ?D(Pars),
-    FunWithParameters = FunName++"("++TextPars++")",
-    fix_proposals(FALRest, DLRest, PrefixLength,
-                  [{FunWithArity, FunWithParameters, Pars, Doc} | Acc]).
+    FunWithParameters = FunName ++ "(" ++ TextPars ++ ")",
+    fix_proposals(
+        FALRest,
+        DLRest,
+        PrefixLength,
+        [{FunWithArity, FunWithParameters, Pars, Doc} | Acc]
+    ).
 
 extract_pars(FunctionName, Arity, Offset, Doc) ->
     Sub1 = erlide_util:get_all_between_strs(Doc, "<CODE>", "</CODE>"),
     Sub2 = erlide_util:get_all_between_strs(Doc, "<a name =", "</span>"),
     Sub3 = erlide_util:get_all_between_strs(Doc, "<a name=", "</span>"),
-    try_make_pars(Sub1++Sub2++Sub3, FunctionName, Arity, Offset).
+    try_make_pars(Sub1 ++ Sub2 ++ Sub3, FunctionName, Arity, Offset).
 
 try_make_pars([], _, Arity, Offset) ->
     {make_parameters(Arity), make_par_offs_length(0, Arity, Offset)};
@@ -597,7 +661,7 @@ make_parameters(0) ->
 make_parameters(1) ->
     "_";
 make_parameters(N) when is_integer(N) ->
-    "_, " ++ make_parameters(N-1);
+    "_, " ++ make_parameters(N - 1);
 make_parameters([]) ->
     "";
 make_parameters([Par]) ->
@@ -608,16 +672,10 @@ make_parameters([Par | Rest]) ->
 make_par_offs_length(N, N, _) ->
     [];
 make_par_offs_length(I, N, Offset) ->
-    [{Offset, 1} | make_par_offs_length(I+1, N, Offset + 3)].
+    [{Offset, 1} | make_par_offs_length(I + 1, N, Offset + 3)].
 
 make_par_offs_length(N, N, _ParTokens, _Offset) ->
     [];
 make_par_offs_length(I, N, [Par | Rest], Offset) ->
     Len = length(Par),
-    [{Offset, Len} | make_par_offs_length(I+1, N, Rest, Offset + Len + 2)].
-
-
-
-
-
-
+    [{Offset, Len} | make_par_offs_length(I + 1, N, Rest, Offset + Len + 2)].

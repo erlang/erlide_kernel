@@ -4,14 +4,19 @@
 -include_lib("kernel/include/file.hrl").
 
 -export([
-         check_and_renew_cached/5
-         ]).
+    check_and_renew_cached/5
+]).
 
 -type date() :: {{1900..2038, 1..12, 1..31}, {0..24, 0..59, 0..59}}.
 -define(NO_DATE, {{1900, 1, 1}, {0, 0, 0}}).
 
--spec check_and_renew_cached(file:name_all(), file:name_all(), non_neg_integer(),
-                             fun((any()) -> any()), boolean()) -> {'cached'|'renewed'|'dont_use_cache', any()}.
+-spec check_and_renew_cached(
+    file:name_all(),
+    file:name_all(),
+    non_neg_integer(),
+    fun((any()) -> any()),
+    boolean()
+) -> {'cached' | 'renewed' | 'dont_use_cache', any()}.
 
 check_and_renew_cached(SourceFileName, _CacheFileName, _Version, RenewFun, false) ->
     Term = RenewFun(SourceFileName),
@@ -34,7 +39,7 @@ check_and_renew_cached(SourceFileName, CacheFileName, Version, RenewFun, true) -
 
 -spec read_cache_date_and_version(string()) -> {date(), integer()}.
 read_cache_date_and_version(CacheFileName) ->
-    ?D("check "++CacheFileName),
+    ?D("check " ++ CacheFileName),
     case file:open(CacheFileName, [read, binary]) of
         {ok, F} ->
             {ok, BinDateAndVersion} = file:read(F, 7),
@@ -51,12 +56,13 @@ check_cached(none, CacheFileName, Version) ->
     check_cached_aux(SourceModDate, CacheFileName, Version);
 check_cached(SourceFileName, CacheFileName, Version) ->
     ?D({SourceFileName, CacheFileName}),
-    SourceModDate = case file:read_file_info(SourceFileName) of
-                        {ok, Info} ->
-                            Info#file_info.mtime;
-                        {error, enoent} ->
-                            ?NO_DATE
-                    end,
+    SourceModDate =
+        case file:read_file_info(SourceFileName) of
+            {ok, Info} ->
+                Info#file_info.mtime;
+            {error, enoent} ->
+                ?NO_DATE
+        end,
     ?D(SourceModDate),
     check_cached_aux(SourceModDate, CacheFileName, Version).
 
@@ -94,7 +100,7 @@ read_cache(CacheFileName) ->
 
 -spec bin_to_date(binary()) -> date().
 bin_to_date(<<Y:15/integer-big, Mo:4, D:5, H:5, M:6, S:5>>) ->
-    {{Y, Mo, D}, {H, M, S*2}}.
+    {{Y, Mo, D}, {H, M, S * 2}}.
 
 -spec date_to_bin(date()) -> binary().
 date_to_bin({{Y, Mo, D}, {H, M, S}}) ->
@@ -117,8 +123,7 @@ touch_path([], _) ->
     ok;
 touch_path([_], _) ->
     ok;
-touch_path([H|T], Acc) ->
+touch_path([H | T], Acc) ->
     Crt = filename:join(Acc, H),
     _Err = file:make_dir(Crt),
     touch_path(T, Crt).
-
