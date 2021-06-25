@@ -5,4 +5,4 @@ source ../../build_utils.sh
 dir=`pwd`
 prj=`basename $dir`
 
-build_project ../../rebar3 $prj 17 do clean,compile
+build_project ../../rebar3 $prj 20 do clean,compile
