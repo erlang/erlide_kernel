@@ -169,6 +169,11 @@ tokens_test_() ->
             test_scan("3")
         ),
         ?_assertEqual(
+            {ok, [#token{kind = integer, line = 0, offset = 0, length = 3, text = "3_3", value = 33}],
+                {0, 2, 1}},
+            test_scan("3_3")
+        ),
+        ?_assertEqual(
             {ok,
                 [#token{kind = integer, line = 0, offset = 0, length = 3, text = "4#3", value = 3}],
                 {0, 4, 3}},
