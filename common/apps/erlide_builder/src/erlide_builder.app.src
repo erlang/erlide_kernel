@@ -1,5 +1,6 @@
 {application, erlide_builder,
   [
+   {description,"erlide_builder"},
    {vsn, "0.101.0"},
    {erlide_context, builder},
    {registered,   []},
