@@ -38,8 +38,8 @@ server_cmd(ScannerName, Command, Args) ->
             {Command, _Pid, Result} ->
                 Result
         end
-    catch _:Exception ->
-              {error, Exception, erlang:get_stacktrace()}
+    catch _:Exception:Stacktrace ->
+              {error, Exception, Stacktrace}
     end.
 
 spawn_server(ScannerName) ->
@@ -98,8 +98,8 @@ cmd(Cmd, From, Args, Module) ->
         exit:Error ->
             reply(Cmd, From, {exit, Error}),
             Module;
-        error:Error ->
-            reply(Cmd, From, {error, Error, erlang:get_stacktrace()}),
+        error:Error:Stacktrace ->
+            reply(Cmd, From, {error, Error, Stacktrace}),
             Module
     end.
 

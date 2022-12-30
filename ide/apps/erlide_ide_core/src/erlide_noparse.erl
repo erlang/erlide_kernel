@@ -56,8 +56,8 @@ initial_parse(ScannerName, ModuleFileName, InitialText, StateDir, UseCache,
                                     RenewFun, UseCache),
         {ok, Model, Cached, Refs}
     catch
-        error:Reason ->
-            {error, Reason, erlang:get_stacktrace()}
+        error:Reason:Stacktrace ->
+            {error, Reason, Stacktrace}
     end.
 
 -spec reparse(atom(), boolean()) ->
@@ -69,8 +69,8 @@ reparse(ScannerName, UpdateSearchServer) ->
         {Model, _Refs} = do_parse(ScannerName, "", Tokens, "", UpdateSearchServer),
         {ok, Model}
     catch
-        error:Reason ->
-            {error, Reason, erlang:get_stacktrace()}
+        error:Reason:Stacktrace ->
+            {error, Reason, Stacktrace}
     end.
 
 -spec get_module_refs(atom(), string(), string(), boolean()) -> [#ref{}].
