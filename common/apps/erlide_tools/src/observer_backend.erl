@@ -49,7 +49,7 @@ vsn() ->
 %%
 etop_collect(Collector) ->
     ProcInfo = etop_collect(processes(), []),
-    Collector ! {self(),#etop_info{now = now(),
+    Collector ! {self(),#etop_info{now = erlang:timestamp(),
            n_procs = length(ProcInfo),
            run_queue = erlang:statistics(run_queue),
            wall_clock = erlang:statistics(wall_clock),

@@ -224,8 +224,8 @@ handle_io_request(Client, State, From, ReplyAs, IoRequest) ->
     end.
 
 send_event(String, From, Encoding) ->
-    %%Client ! {String, group_leader(), From, erlide_time_compat:timestamp()},
-    erlide_jrpc:event(io_server, {String, Encoding, group_leader(), From, erlide_time_compat:timestamp()}).
+    %%Client ! {String, group_leader(), From, erlang:timestamp()},
+    erlide_jrpc:event(io_server, {String, Encoding, group_leader(), From, erlang:timestamp()}).
 
 
 handle_io_requests(ClientSocket, State0, From, ReplyAs, [LastIoReq]) ->
