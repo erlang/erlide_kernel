@@ -1,5 +1,6 @@
 {application, erlide_ide,
   [
+   {description,"erlide_ide"},
    {vsn, "0.115.1"},
    {erlide_context, ide},
    {registered,   []},

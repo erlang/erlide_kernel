@@ -1,5 +1,6 @@
 {application, erlide_common,
   [
+   {description,"erlide_common"},
    {vsn, "0.101.0"},
    {erlide_context, common},
    {registered,   []},
