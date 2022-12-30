@@ -135,8 +135,8 @@ server_cmd(Command, Args) ->
                 Result
         end
     catch
-        _:Exception ->
-            {error, Exception, erlang:get_stacktrace()}
+        _:Exception:Stacktrace ->
+            {error, Exception, Stacktrace}
     end.
 
 
@@ -165,11 +165,11 @@ cmd(Cmd, From, Args, State) ->
                 NewState
         end
     catch
-        exit:Error ->
-            reply(Cmd, From, {exit, Error, erlang:get_stacktrace()}),
+        exit:Error:Stacktrace ->
+            reply(Cmd, From, {exit, Error, Stacktrace}),
             State;
-        error:Error ->
-            reply(Cmd, From, {error, Error, erlang:get_stacktrace()}),
+        error:Error:Stacktrace ->
+            reply(Cmd, From, {error, Error, Stacktrace}),
             State
     end.
 
