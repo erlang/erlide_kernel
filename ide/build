@@ -8,4 +8,4 @@ prj=`basename $dir`
 export LOCALDEP_DIR=`pwd`
 export REBAR_COLOR="low"
 
-build_project ../rebar3 $prj 19 "$@"
+build_project ../rebar3 $prj 23 "$@"

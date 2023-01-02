@@ -3,7 +3,8 @@
 source ./build_utils.sh
 
 setup_otp() {
-    echo "Setup Erlang tools - the first time, this might take 30 minutes or more, as we need to build up to 4 Erlang runtimes..."
+    echo "Setup Erlang tools - the first time, this might take 30 minutes or more, as we need to build up to 3 Erlang runtimes..."
+    mkdir -p ~/erlide_tools
     if [ ! -e ~/erlide_tools/kerl ]; then
         curl -s 'https://raw.githubusercontent.com/kerl/kerl/master/kerl' > ~/erlide_tools/kerl
         chmod u+x ~/erlide_tools/kerl
