@@ -6,22 +6,22 @@
      <beam_dir
             path="ebin"
             context="debugger"
-            otp_version="17">
+            otp_version="23">
       </beam_dir>
      <beam_dir
-            path="ebin/17"
+            path="ebin/23"
             context="debugger"
-            otp_version="17">
+            otp_version="23">
       </beam_dir>
      <beam_dir
-            path="ebin/18"
+            path="ebin/24"
             context="debugger"
-            otp_version="18">
+            otp_version="24">
       </beam_dir>
      <beam_dir
-            path="ebin/19"
+            path="ebin/25"
             context="debugger"
-            otp_version="19">
+            otp_version="25">
       </beam_dir>
 ​   </extension>
 </plugin>
