@@ -549,7 +549,6 @@ do_analysis(Files, FileName, Plt, PltInfo, AnalysisType, JPid) ->
 
 do_analysis(Files, FileName, Plt, PltInfo, AnalysisType, IncludeDirs, _NoCheckPLT, From, JPid) ->
     assert_writable(FileName),
-    hipe_compile(Files, true),
     %%     report_analysis_start(Options),
     State0 = new_state(),
     State1 = init_output(State0),
@@ -618,54 +617,6 @@ assert_writable(PltFile) ->
         false ->
             Msg = io_lib:format("    The PLT file ~s is not writable", [PltFile]),
             error(Msg)
-    end.
-
--define(MIN_FILES_FOR_NATIVE_COMPILE, 20).
-
--spec hipe_compile([file:filename()], boolean()) -> 'ok'.
-
-hipe_compile(Files, ErlangMode) ->
-    NoNative = (get(dialyzer_options_native) =:= false),
-    FewFiles = (length(Files) < ?MIN_FILES_FOR_NATIVE_COMPILE),
-    case NoNative orelse FewFiles orelse ErlangMode of
-        true -> ok;
-        false ->
-            case erlang:system_info(hipe_architecture) of
-                undefined -> ok;
-                _ ->
-                    Mods = [lists, dict, gb_sets, gb_trees, ordsets, sets,
-                            cerl, cerl_trees, erl_types, erl_bif_types,
-                            dialyzer_analysis_callgraph, dialyzer_codeserver,
-                            dialyzer_dataflow, dialyzer_dep, dialyzer_plt,
-                            dialyzer_succ_typings, dialyzer_typesig],
-                    %%       report_native_comp(Options),
-                    {_T1, _} = statistics(wall_clock),
-                    native_compile(Mods),
-                    {_T2, _} = statistics(wall_clock)
-            %%       report_elapsed_time(_T1, _T2, Options)
-            end
-    end.
-
-native_compile(Mods) ->
-    case erlang:system_info(schedulers) of
-        %% N when N > 1 ->
-        %%   Parent = self(),
-        %%   Pids = [spawn(fun () -> Parent ! {self(), hc(M)} end) || M <- Mods],
-        %%   lists:foreach(fun (Pid) -> receive {Pid, Res} -> Res end end, Pids);
-        _ -> % 1 ->
-            lists:foreach(fun (Mod) -> hc(Mod) end, Mods)
-    end.
-
-hc(Mod) ->
-    case code:ensure_loaded(Mod) of
-        {module, Mod} -> ok;
-        {error, sticky_directory} -> ok
-    end,
-    case code:is_module_native(Mod) of
-        true -> ok;
-        false ->
-            {ok, Mod} = hipe:c(Mod),
-            ok
     end.
 
 new_state() ->
