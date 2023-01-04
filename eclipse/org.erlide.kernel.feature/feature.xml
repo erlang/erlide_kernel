@@ -2,7 +2,7 @@
 <feature
       id="org.erlide.kernel.feature"
       label="Erlang IDE kernel"
-      version="0.115.3.qualifier"
+      version="0.116.0.qualifier"
       provider-name="%vendorName"
       image="erlang-64.gif">
    <install-handler/>
