@@ -266,6 +266,9 @@ first_lines(Clauses) ->
 
 first_line({clause,_L,_Vars,_,Exprs}) ->
     first_line(Exprs);
+%% Common Test adaptation
+first_line([{call_remote,0,ct_line,line,_As}|Exprs]) ->
+    first_line(Exprs);
 first_line([Expr|_Exprs]) -> % Expr = {Op, Line, ..varying no of args..}
     element(2, Expr).
 
