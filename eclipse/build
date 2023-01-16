@@ -32,11 +32,11 @@ VSN=`get_feature_vsn org.erlide.kernel.feature`
 chmod u+x mvnw
 ./mvnw -B -U tycho-versions:set-version -DnewVersion=${VSN}.qualifier -Dartifacts=org.erlide.kernel.feature,org.erlide.kernel.debugger,org.erlide.kernel.ide,org.erlide.kernel.site,org.erlide.kernel.common
 # there will be an error if versions don't match
-git commit -am 'foo'
+
 ./mvnw -B -U clean verify
 
 mv org.erlide.kernel.site/target/org.erlide.kernel.site-*.zip .
-f=`ls org.erlide.kernel.site-*.zip`
+f=`ls org.erlide.kernel.site-${VSN}-SNAPSHOT.zip`
 newName=${f/-SNAPSHOT/}
 mv "$f" "$newName"
 
