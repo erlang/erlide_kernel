@@ -295,7 +295,7 @@ flat(L) ->
                    info = dict:new()           :: dict:dict(),
                    contracts = dict:new()      :: dict:dict(),
                    types = dict:new()          :: dict:dict(),
-                   exported_types = sets:new() :: set:set(),
+                   exported_types = sets:new() :: sets:set(),
                    mod_deps                    :: mod_deps(),
                    implementation_md5 = []     :: [file_md5()]}).
 
