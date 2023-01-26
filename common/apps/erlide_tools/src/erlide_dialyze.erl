@@ -17,8 +17,7 @@
 -export([dialyze/5,
          format_warnings/1,
          check_plt/1,
-         update_plt_with_additional_paths/2,
-         start_update_plt_with_additional_paths/3]).
+         update_plt_with_additional_paths/2]).
 
 -compile({no_auto_import, [error/1, error/2]}).
 
@@ -97,50 +96,6 @@ update_plt_with_additional_paths(FileName, Paths) ->
             PltInfo = {Md5, dict:new()},
             Files = [F || {F, _} <- Md5],
             do_analysis(Files, FileName, dialyzer_plt:new(), PltInfo, plt_build, false);
-        {error, no_such_file} ->
-            Msg = io_lib:format("Could not find the PLT: ~s\n~s",
-                                [FileName, default_plt_error_msg()]),
-            error(Msg);
-        {error, not_valid} ->
-            Msg = io_lib:format("The file: ~s is not a valid PLT file\n~s",
-                                [FileName, default_plt_error_msg()]),
-            error(Msg);
-        {error, read_error} ->
-            Msg = io_lib:format("Could not read the PLT: ~s\n~s",
-                                [FileName, default_plt_error_msg()]),
-            error(Msg);
-        {error, {no_file_to_remove, F}} ->
-            Msg = io_lib:format("Could not remove the file ~s from the PLT: ~s\n",
-                                [F, FileName]),
-            error(Msg)
-    end.
-
-start_update_plt_with_additional_paths(JPid, FileName, Paths) ->
-    ?D(Paths),
-    case update_plt(FileName, Paths, [], []) of
-        {differ, Md5, DiffMd5, ModDeps} ->
-            ?D({differ, Md5, DiffMd5, ModDeps}),
-            %%             report_failed_plt_check(Opts, DiffMd5),
-            {AnalFiles, _RemovedMods, ModDeps1} =
-                expand_dependent_modules(Md5, DiffMd5, ModDeps, Paths),
-            Plt = clean_plt(FileName, sets:from_list([])),
-            case AnalFiles =:= [] of
-                true ->
-                    %% Only removed stuff. Just write the PLT.
-                    dialyzer_plt:to_file(FileName, Plt, ModDeps,
-                                         {Md5, ModDeps}),
-                    [];
-                %%                     {?RET_NOTHING_SUSPICIOUS, []};
-                false ->
-                    ?D({AnalFiles, FileName, ModDeps1}),
-                    do_analysis(AnalFiles, FileName, Plt, {Md5, ModDeps1}, plt_build, JPid)
-            end;
-        ok ->
-            [];
-        {old_version, Md5} ->
-            PltInfo = {Md5, dict:new()},
-            Files = [F || {F, _} <- Md5],
-            do_analysis(Files, FileName, dialyzer_plt:new(), PltInfo, plt_build, JPid);
         {error, no_such_file} ->
             Msg = io_lib:format("Could not find the PLT: ~s\n~s",
                                 [FileName, default_plt_error_msg()]),
