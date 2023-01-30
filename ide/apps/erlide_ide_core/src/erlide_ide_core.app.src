@@ -1,7 +1,7 @@
 {application, erlide_ide_core,
   [
    {description,"erlide_ide_core"},
-   {vsn, "0.113.0"},
+   {vsn, "0.117.0"},
    {erlide_context, ide},
    {registered,   []},
    {applications, [kernel, stdlib, erlide_common]},

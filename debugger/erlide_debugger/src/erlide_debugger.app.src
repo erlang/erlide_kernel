@@ -1,7 +1,7 @@
 {application, erlide_debugger,
   [
    {description,"erlide_debugger"},
-   {vsn, "0.102.0"},
+   {vsn, "0.117.0"},
    {erlide_context, debugger},
    {registered,   []},
    {applications, [kernel, stdlib]},
