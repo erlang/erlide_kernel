@@ -1,0 +1,32 @@
+#!/bin/bash -e
+# This script will publish a built erlide_kernel plugin to
+# the update site repository.
+#
+# The plugin files will be extracted to:
+# <repo>/update/kernel/<plugin-version>/
+#
+repo=${repo:-erlide/erlide.github.io}
+
+# Get the plugin version from feature.xml
+source ../build_utils.sh
+version=`get_feature_vsn org.erlide.kernel.feature`
+
+echo "Publishing version ${version} to repository ${repo}.."
+echo
+read -p "Press enter to continue..."
+
+# Clone the destination repo for the update site
+tmp_dir="/tmp/${repo}"
+rm -rf ${tmp_dir}
+git clone --depth 1 git@github.com:${repo} ${tmp_dir}
+
+# Extract the Eclipse plugin package to the update site
+dest_dir="${tmp_dir}/update/kernel/${version}"
+mkdir -p ${dest_dir}
+unzip -o org.erlide.kernel.site-${version}.zip -d ${dest_dir}
+
+# Push the new plugin to the update site repo
+cd ${dest_dir}
+git add .
+git commit -a -m "Publish erlide_kernel ${version}"
+git push origin master
