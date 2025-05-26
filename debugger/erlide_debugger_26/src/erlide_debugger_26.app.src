@@ -1,0 +1,10 @@
+{application, erlide_debugger_26,
+  [
+    {description,    "erlide_debugger_26"},
+    {vsn,            "0.117.0"},
+    {erlide_context, debugger},
+    {registered,     []},
+    {applications,   [kernel, stdlib]},
+    {env,            []}
+  ]
+}.
