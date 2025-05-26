@@ -5,4 +5,4 @@ source ../build_utils.sh
 dir=`pwd`
 prj=`basename $dir`
 
-build_project ../rebar3 $prj 23 "$@"
+build_project ../rebar3 $prj 25 "$@"
