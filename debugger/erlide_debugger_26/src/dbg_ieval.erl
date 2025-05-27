@@ -23,6 +23,10 @@
 -export([eval_expr/3]).
 -export([check_exit_msg/3,exception/4]).
 
+%% erlide patch ------------------------------------------------------
+-export([all_frames/0]).
+%% erlide patch ------------------------------------------------------
+
 -include("dbg_ieval.hrl").
 
 %%====================================================================
@@ -73,13 +77,24 @@ exit_info(Int, AttPid, OrigPid, Reason, ExitInfo) ->
 	{{Mod,Line},Bs,S} ->
 	    dbg_istk:from_external(S),
 	    Le = dbg_istk:stack_level(),
-	    dbg_icmd:tell_attached({exit_at, {Mod, Line}, Reason, Le}),
+%% erlide patch ------------------------------------------------------
+	    %% dbg_icmd:tell_attached({exit_at, {Mod, Line}, Reason, Le}),
+	    dbg_icmd:tell_attached({exit_at, {Mod, Line}, Reason, Le, OrigPid, dbg_istk:all_frames(S), Bs}),
+%% erlide patch ------------------------------------------------------
 	    exit_loop(OrigPid, Reason, Bs,#ieval{module=Mod,line=Line});
 	{} ->
 	    dbg_istk:init(),
-	    dbg_icmd:tell_attached({exit_at, null, Reason, 1}),
+%% erlide patch ------------------------------------------------------
+	    %% dbg_icmd:tell_attached({exit_at, null, Reason, 1}),
+	    dbg_icmd:tell_attached({exit_at, null, Reason, 1, OrigPid}),
+%% erlide patch ------------------------------------------------------
 	    exit_loop(OrigPid, Reason, erl_eval:new_bindings(),#ieval{})
     end.
+
+%% erlide patch ------------------------------------------------------
+all_frames() ->
+    {dbg_istk:all_frames(), []}.
+%% erlide patch ------------------------------------------------------
 
 %%--------------------------------------------------------------------
 %% eval_expr(Expr, Bs, Ieval) -> {value, Value, Bs}
@@ -459,6 +474,13 @@ do_eval_function(Mod, Fun, As0, Bs0, _, Ieval0) when is_function(Fun);
 	    %% ({badarity,{{Mod,Name},As}})
 	    exception(error, Reason, Bs0, Ieval0)
     end;
+
+%% erlide patch ------------------------------------------------------
+%% Common Test adaptation
+do_eval_function(ct_line, line, As, Bs, extern, #ieval{level=Le}=Ieval) ->
+    debugged_cmd({apply,ct_line,line,As}, Bs, Ieval#ieval{level=Le+1}),
+    {value, ignore, Bs};
+%% erlide patch ------------------------------------------------------
 
 do_eval_function(Mod, Name, As0, Bs0, Called, Ieval0) ->
     #ieval{level=Le,line=Li,top=Top} = Ieval0,
@@ -931,6 +953,13 @@ expr({make_ext_fun,Line,MFA0}, Bs0, Ieval0) ->
 				 arguments=[M,F,A],line=-1},
 	    exception(error, badarg, Bs, Ieval, true)
     end;
+
+%% erlide patch ------------------------------------------------------
+%% Common test adaptation
+expr({call_remote,0,ct_line,line,As0,Lc}, Bs0, Ieval0) ->
+    {As,_Bs} = eval_list(As0, Bs0, Ieval0),
+    eval_function(ct_line, line, As, Bs0, extern, Ieval0, Lc);
+%% erlide patch ------------------------------------------------------
 
 %% Local function call
 expr({local_call,Line,F,As0,Lc}, Bs0, #ieval{module=M} = Ieval0) ->

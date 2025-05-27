@@ -30,6 +30,10 @@
 -export([set/3, get/3]).
 -export([handle_msg/4]).
 
+%% erlide patch ------------------------------------------------------
+-export([set_variable_value/4]).
+%% erlide patch ------------------------------------------------------
+
 %% Library functions for attached process handling
 -export([tell_attached/1]).
 
@@ -50,6 +54,12 @@
 %%                  | Le
 %% specifies if the process should break.
 %%--------------------------------------------------------------------
+
+%% erlide patch ------------------------------------------------------
+%% Common Test adaptation
+cmd({call_remote,0,ct_line,line,_As}, Bs, _Ieval) ->
+    Bs;
+%% erlide patch ------------------------------------------------------
 
 cmd(Expr, Bs, Ieval) ->
     cmd(Expr, Bs, get(next_break), Ieval).
@@ -181,6 +191,17 @@ skip(Meta) ->     Meta ! {user, {cmd, skip}}.
 timeout(Meta) ->  Meta ! {user, timeout}.
 
 stop(Meta) ->     Meta ! {user, {cmd, stop}}.
+
+%% erlide patch ------------------------------------------------------
+set_variable_value(Meta, Variable, Value, SP) ->
+    eval(Meta, {no_module, Variable++"="++Value, SP}),
+    receive
+        {Meta, EvalRsp} ->
+            EvalRsp
+    after 5000 ->
+            {error, timeout}
+    end.
+%% erlide patch ------------------------------------------------------
 
 eval(Meta, {Mod, Cmd}) ->
     eval(Meta, {Mod, Cmd, nostack});
@@ -338,6 +359,12 @@ handle_user_msg({set,trace,Bool}, _Status, _Bs, _Ieval) ->
     tell_attached({trace, Bool});
 handle_user_msg({set,stack_trace,Flag}, _Status, _Bs, _Ieval) ->
     set_stack_trace(Flag);
+%% erlide patch ------------------------------------------------------
+handle_user_msg({get,all_stack_frames,From,_}, _Status, Bs, _Ieval) ->
+    reply(From, all_stack_frames, {all_frames(), Bs});
+handle_user_msg({get,all_modules_on_stack,From,_}, _Status, _Bs, _Ieval) ->
+    reply(From, all_modules_on_stack, all_modules_on_stack());
+%% erlide patch ------------------------------------------------------
 handle_user_msg({get,bindings,From,SP}, _Status, Bs, _Ieval) ->
     reply(From, bindings, bindings(Bs, SP));
 handle_user_msg({get,stack_frame,From,{Dir,SP}}, _Status, _Bs,_Ieval) ->
@@ -346,6 +373,14 @@ handle_user_msg({get,messages,From,_}, _Status, _Bs, _Ieval) ->
     reply(From, messages, messages());
 handle_user_msg({get,backtrace,From,N}, _Status, _Bs, Ieval) ->
     reply(From, backtrace, dbg_istk:backtrace(N, Ieval)).
+
+%% erlide patch ------------------------------------------------------
+all_modules_on_stack() ->
+    dbg_istk:all_modules_on_stack().
+
+all_frames() ->
+    dbg_ieval:all_frames().
+%% erlide patch ------------------------------------------------------
 
 set_stack_trace(true) ->
     set_stack_trace(all);
