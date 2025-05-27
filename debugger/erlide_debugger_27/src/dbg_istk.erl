@@ -1,7 +1,7 @@
 %%
 %% %CopyrightBegin%
 %%
-%% Copyright Ericsson AB 2011-2021. All Rights Reserved.
+%% Copyright Ericsson AB 2011-2024. All Rights Reserved.
 %%
 %% Licensed under the Apache License, Version 2.0 (the "License");
 %% you may not use this file except in compliance with the License.
@@ -18,13 +18,16 @@
 %% %CopyrightEnd%
 %%
 -module(dbg_istk).
+-moduledoc false.
 -export([init/0,delayed_to_external/0,from_external/1,
 	 push/3,pop/0,pop/1,stack_level/0,
 	 delayed_stacktrace/0,delayed_stacktrace/2,
 	 bindings/1,stack_frame/2,backtrace/2,
 	 in_use_p/2]).
 
+%% erlide patch ------------------------------------------------------
 -export([all_frames/0, all_frames/1, all_modules_on_stack/0]).
+%% erlide patch ------------------------------------------------------
 
 -include("dbg_ieval.hrl").
 
@@ -52,6 +55,7 @@ from_external({stack,Stk}) ->
 init(Stack) ->
     put(?STACK, Stack).
 
+%% erlide patch ------------------------------------------------------
 all_frames() ->
     all_frames(get(?STACK)).
 
@@ -73,6 +77,7 @@ all_modules_on_stack(Stack) ->
 
 args2arity(As) when is_list(As) ->
     length(As).
+%% erlide patch ------------------------------------------------------
 
 %% We keep track of a call stack that is used for
 %%  1) saving stack frames that can be inspected from an Attached

@@ -1,10 +1,10 @@
 #! /bin/bash -e
 
-cd erlide_debugger_23
+cd erlide_debugger_25
 ./build "$@"
-cd ../erlide_debugger_24
+cd ../erlide_debugger_26
 ./build "$@"
-cd ../erlide_debugger_25
+cd ../erlide_debugger_27
 ./build "$@"
 cd ../erlide_debugger
 ./build "$@"

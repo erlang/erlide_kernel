@@ -1,7 +1,7 @@
 %%
 %% %CopyrightBegin%
 %% 
-%% Copyright Ericsson AB 1998-2018. All Rights Reserved.
+%% Copyright Ericsson AB 1998-2024. All Rights Reserved.
 %% 
 %% Licensed under the Apache License, Version 2.0 (the "License");
 %% you may not use this file except in compliance with the License.
@@ -18,6 +18,7 @@
 %% %CopyrightEnd%
 %%
 -module(dbg_icmd).
+-moduledoc false.
 
 %% Internal command receiver/handler
 -export([cmd/3]).
@@ -26,9 +27,12 @@
 -export([step/1, next/1, continue/1, finish/1, skip/1, timeout/1,
 	 stop/1]).
 -export([eval/2]).
--export([set_variable_value/4]).
 -export([set/3, get/3]).
 -export([handle_msg/4]).
+
+%% erlide patch ------------------------------------------------------
+-export([set_variable_value/4]).
+%% erlide patch ------------------------------------------------------
 
 %% Library functions for attached process handling
 -export([tell_attached/1]).
@@ -51,9 +55,11 @@
 %% specifies if the process should break.
 %%--------------------------------------------------------------------
 
+%% erlide patch ------------------------------------------------------
 %% Common Test adaptation
 cmd({call_remote,0,ct_line,line,_As}, Bs, _Ieval) ->
     Bs;
+%% erlide patch ------------------------------------------------------
 
 cmd(Expr, Bs, Ieval) ->
     cmd(Expr, Bs, get(next_break), Ieval).
@@ -186,6 +192,7 @@ timeout(Meta) ->  Meta ! {user, timeout}.
 
 stop(Meta) ->     Meta ! {user, {cmd, stop}}.
 
+%% erlide patch ------------------------------------------------------
 set_variable_value(Meta, Variable, Value, SP) ->
     eval(Meta, {no_module, Variable++"="++Value, SP}),
     receive
@@ -194,7 +201,7 @@ set_variable_value(Meta, Variable, Value, SP) ->
     after 5000 ->
             {error, timeout}
     end.
-
+%% erlide patch ------------------------------------------------------
 
 eval(Meta, {Mod, Cmd}) ->
     eval(Meta, {Mod, Cmd, nostack});
@@ -306,7 +313,8 @@ handle_int_msg({break_options, Break}, _Status, _Bs, _Ieval) ->
 handle_int_msg(no_break, _Status, _Bs, _Ieval) ->
     put(breakpoints, []);
 handle_int_msg({no_break,M}, _Status, _Bs, _Ieval) ->
-    put(breakpoints, [ML || {Mod,_L}=ML <- get(breakpoints), Mod=/=M]);
+    put(breakpoints, [B || {{Mod,_L},_Flags}=B <- get(breakpoints),
+                           Mod =/= M]);
 handle_int_msg(stop, exit_at, _Bs, _Ieval) ->
     erlang:exit(normal).
 
@@ -351,10 +359,12 @@ handle_user_msg({set,trace,Bool}, _Status, _Bs, _Ieval) ->
     tell_attached({trace, Bool});
 handle_user_msg({set,stack_trace,Flag}, _Status, _Bs, _Ieval) ->
     set_stack_trace(Flag);
-handle_user_msg({get, all_stack_frames, From, _}, _Status, Bs, _Ieval) ->
+%% erlide patch ------------------------------------------------------
+handle_user_msg({get,all_stack_frames,From,_}, _Status, Bs, _Ieval) ->
     reply(From, all_stack_frames, {all_frames(), Bs});
-handle_user_msg({get, all_modules_on_stack, From, _}, _Status, _Bs, _Ieval) ->
+handle_user_msg({get,all_modules_on_stack,From,_}, _Status, _Bs, _Ieval) ->
     reply(From, all_modules_on_stack, all_modules_on_stack());
+%% erlide patch ------------------------------------------------------
 handle_user_msg({get,bindings,From,SP}, _Status, Bs, _Ieval) ->
     reply(From, bindings, bindings(Bs, SP));
 handle_user_msg({get,stack_frame,From,{Dir,SP}}, _Status, _Bs,_Ieval) ->
@@ -364,11 +374,13 @@ handle_user_msg({get,messages,From,_}, _Status, _Bs, _Ieval) ->
 handle_user_msg({get,backtrace,From,N}, _Status, _Bs, Ieval) ->
     reply(From, backtrace, dbg_istk:backtrace(N, Ieval)).
 
+%% erlide patch ------------------------------------------------------
 all_modules_on_stack() ->
     dbg_istk:all_modules_on_stack().
 
 all_frames() ->
     dbg_ieval:all_frames().
+%% erlide patch ------------------------------------------------------
 
 set_stack_trace(true) ->
     set_stack_trace(all);
@@ -407,19 +419,14 @@ eval_restricted({From,_Mod,Cmd,SP}, Bs) ->
     case catch parse_cmd(Cmd, 1) of
 	{'EXIT', _Reason} ->
 	    From ! {self(), {eval_rsp, 'Parse error'}};
-	{[{var,_,Var}], XBs} ->
+	[{var,_,Var}] ->
 	    Bs2 = bindings(Bs, SP),
 	    Res = case get_binding(Var, Bs2) of
 		      {value, Value} -> Value;
-		      unbound ->
-                          case get_binding(Var, XBs) of
-                              {value, _} ->
-                                  'Only possible to inspect variables';
-                              unbound -> unbound
-                          end
+		      unbound -> unbound
 		  end,
 	    From ! {self(), {eval_rsp, Res}};
-	{_Forms, _XBs} ->
+	_Forms ->
 	    Rsp = 'Only possible to inspect variables',
 	    From ! {self(), {eval_rsp, Rsp}}
     end.
@@ -434,18 +441,17 @@ eval_nonrestricted({From, _Mod, Cmd, _SP}, Bs,
 	{'EXIT', _Reason} ->
 	    From ! {self(), {eval_rsp, 'Parse error'}},
 	    Bs;
-	{Forms, XBs} ->
+	Forms ->
 	    mark_running(Line, Le),
-            Bs1 = merge_bindings(Bs, XBs),
-	    {Res, Bs2} =
+	    {Res, Bs1} =
 		lists:foldl(fun(Expr, {_Res, Bs0}) ->
 				    eval_nonrestricted_1(Expr,Bs0,Ieval)
 			    end,
-			    {null, Bs1},
+			    {null, Bs},
 			    Forms),
 	    mark_break(M, Line, Le),
 	    From ! {self(), {eval_rsp, Res}},
-	    remove_binding_structs(Bs2, XBs)
+	    Bs1
     end.
 
 eval_nonrestricted_1({match,_,{var,_,Var},Expr}, Bs, Ieval) ->
@@ -470,14 +476,6 @@ eval_expr(Expr, Bs, Ieval) ->
         dbg_ieval:eval_expr(Expr, Bs, Ieval#ieval{top=false}),
     {Res,Bs2}.
 
-%% XBs have unique keys.
-merge_bindings(Bs1, XBs) ->
-    Bs1 ++ erl_eval:bindings(XBs).
-
-remove_binding_structs(Bs1, XBs) ->
-    lists:foldl(fun({N, _V}, Bs) -> lists:keydelete(N, 1, Bs)
-                end, Bs1, erl_eval:bindings(XBs)).
-
 mark_running(LineNo, Le) ->
     put(next_break, running),
     put(user_eval, [{LineNo, Le} | get(user_eval)]),
@@ -492,8 +490,8 @@ mark_break(Cm, LineNo, Le) ->
 
 parse_cmd(Cmd, LineNo) ->
     {ok,Tokens,_} = erl_scan:string(Cmd, LineNo, [text]),
-    {ok,Forms,Bs} = erl_eval:extended_parse_exprs(Tokens),
-    {Forms, Bs}.
+    {ok,Forms} = erl_eval:extended_parse_exprs(Tokens),
+    Forms.
 
 %%====================================================================
 %% Library functions for attached process handling

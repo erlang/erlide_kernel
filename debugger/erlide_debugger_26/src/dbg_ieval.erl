@@ -1,7 +1,7 @@
 %%
 %% %CopyrightBegin%
 %% 
-%% Copyright Ericsson AB 1998-2021. All Rights Reserved.
+%% Copyright Ericsson AB 1998-2024. All Rights Reserved.
 %% 
 %% Licensed under the Apache License, Version 2.0 (the "License");
 %% you may not use this file except in compliance with the License.
@@ -22,7 +22,10 @@
 -export([eval/3,exit_info/5]).
 -export([eval_expr/3]).
 -export([check_exit_msg/3,exception/4]).
+
+%% erlide patch ------------------------------------------------------
 -export([all_frames/0]).
+%% erlide patch ------------------------------------------------------
 
 -include("dbg_ieval.hrl").
 
@@ -74,21 +77,29 @@ exit_info(Int, AttPid, OrigPid, Reason, ExitInfo) ->
 	{{Mod,Line},Bs,S} ->
 	    dbg_istk:from_external(S),
 	    Le = dbg_istk:stack_level(),
+%% erlide patch ------------------------------------------------------
+	    %% dbg_icmd:tell_attached({exit_at, {Mod, Line}, Reason, Le}),
 	    dbg_icmd:tell_attached({exit_at, {Mod, Line}, Reason, Le, OrigPid, dbg_istk:all_frames(S), Bs}),
+%% erlide patch ------------------------------------------------------
 	    exit_loop(OrigPid, Reason, Bs,#ieval{module=Mod,line=Line});
 	{} ->
 	    dbg_istk:init(),
+%% erlide patch ------------------------------------------------------
+	    %% dbg_icmd:tell_attached({exit_at, null, Reason, 1}),
 	    dbg_icmd:tell_attached({exit_at, null, Reason, 1, OrigPid}),
+%% erlide patch ------------------------------------------------------
 	    exit_loop(OrigPid, Reason, erl_eval:new_bindings(),#ieval{})
     end.
 
+%% erlide patch ------------------------------------------------------
 all_frames() ->
     {dbg_istk:all_frames(), []}.
+%% erlide patch ------------------------------------------------------
 
 %%--------------------------------------------------------------------
 %% eval_expr(Expr, Bs, Ieval) -> {value, Value, Bs}
 %%
-%% Evalute a shell expression in the real process.
+%% Evaluate a shell expression in the real process.
 %% Called (dbg_icmd) in response to a user request.
 %%--------------------------------------------------------------------
 eval_expr(Expr0, Bs, Ieval) ->
@@ -270,7 +281,7 @@ meta_loop(Debugged, Bs, #ieval{level=Le} = Ieval) ->
 			      end,
 		    do_exception(Class, Reason, MakeStk, Bs, Ieval);
 
-		%% Error must have occured within a re-entry to
+		%% Error must have occurred within a re-entry to
 		%% interpreted code, simply raise the exception
 		_ ->
 		    erlang:Class(Reason)
@@ -464,10 +475,12 @@ do_eval_function(Mod, Fun, As0, Bs0, _, Ieval0) when is_function(Fun);
 	    exception(error, Reason, Bs0, Ieval0)
     end;
 
+%% erlide patch ------------------------------------------------------
 %% Common Test adaptation
 do_eval_function(ct_line, line, As, Bs, extern, #ieval{level=Le}=Ieval) ->
     debugged_cmd({apply,ct_line,line,As}, Bs, Ieval#ieval{level=Le+1}),
     {value, ignore, Bs};
+%% erlide patch ------------------------------------------------------
 
 do_eval_function(Mod, Name, As0, Bs0, Called, Ieval0) ->
     #ieval{level=Le,line=Li,top=Top} = Ieval0,
@@ -629,8 +642,12 @@ seq([E|Es], Bs0, Ieval) ->
 	{skip,Bs} ->
 	    seq(Es, Bs, Ieval);
 	Bs1 ->
-	    {value,_,Bs} = expr(E, Bs1, Ieval#ieval{top=false}),
-	    seq(Es, Bs, Ieval)
+	    case expr(E, Bs1, Ieval#ieval{top=false}) of
+                {value,_,Bs} ->
+                    seq(Es, Bs, Ieval);
+                {bad_maybe_match,_}=Bad ->
+                    Bad
+            end
     end;
 seq([], Bs, _) ->
     {value,true,Bs}.
@@ -678,7 +695,7 @@ expr({map,Line,E0,Fs0}, Bs0, Ieval0) ->
 
 %% Record update
 expr({record_update,Line,Es},Bs,#ieval{level=Le}=Ieval0) ->
-    %% Incr Level, we don't need to step (next) trough temp
+    %% Incr Level, we don't need to step (next) through temp
     %% variables creation and matching
     Ieval = Ieval0#ieval{top=false, line=Line, level=Le+1},
     Seq = fun(E, {_, _, Bs1}) -> expr(E, Bs1, Ieval) end,
@@ -764,6 +781,24 @@ expr({'orelse',Line,E1,E2}, Bs0, Ieval) ->
             exception(error, {badarg,Val}, Bs, Ieval)
     end;
 
+%% Maybe statement without else
+expr({'maybe',Line,Es}, Bs, Ieval) ->
+    case seq(Es, Bs, Ieval#ieval{line=Line}) of
+        {bad_maybe_match,Val} ->
+            {value,Val,Bs};
+        {value,_,_}=Other ->
+            Other
+    end;
+
+%% Maybe statement with else
+expr({'maybe',Line,Es,Cs}, Bs, Ieval) ->
+    case seq(Es, Bs, Ieval#ieval{line=Line}) of
+        {bad_maybe_match,Val} ->
+            case_clauses(Val, Cs, Bs, else_clause, Ieval#ieval{line=Line});
+        {value,_,_}=Other ->
+            Other
+    end;
+
 %% Matching expression
 expr({match,Line,Lhs,Rhs0}, Bs0, Ieval0) ->
     Ieval = Ieval0#ieval{line=Line},
@@ -773,6 +808,17 @@ expr({match,Line,Lhs,Rhs0}, Bs0, Ieval0) ->
 	    {value,Rhs,Bs};
 	nomatch ->
 	    exception(error, {badmatch,Rhs}, Bs1, Ieval)
+    end;
+
+%% Conditional match expression (?=)
+expr({maybe_match,Line,Lhs,Rhs0}, Bs0, Ieval0) ->
+    Ieval = Ieval0#ieval{line=Line},
+    {value,Rhs,Bs1} = expr(Rhs0, Bs0, Ieval#ieval{top=false}),
+    case match(Lhs, Rhs, Bs1) of
+	{match,Bs} ->
+	    {value,Rhs,Bs};
+	nomatch ->
+            {bad_maybe_match,Rhs}
     end;
 
 %% Construct a fun
@@ -908,10 +954,12 @@ expr({make_ext_fun,Line,MFA0}, Bs0, Ieval0) ->
 	    exception(error, badarg, Bs, Ieval, true)
     end;
 
+%% erlide patch ------------------------------------------------------
 %% Common test adaptation
 expr({call_remote,0,ct_line,line,As0,Lc}, Bs0, Ieval0) ->
     {As,_Bs} = eval_list(As0, Bs0, Ieval0),
     eval_function(ct_line, line, As, Bs0, extern, Ieval0, Lc);
+%% erlide patch ------------------------------------------------------
 
 %% Local function call
 expr({local_call,Line,F,As0,Lc}, Bs0, #ieval{module=M} = Ieval0) ->
@@ -1057,9 +1105,7 @@ expr({bin,Line,Fs}, Bs0, Ieval0) ->
     Ieval = Ieval0#ieval{line=Line,top=false},
     try
 	eval_bits:expr_grp(Fs, Bs0,
-			   fun (E, B) -> expr(E, B, Ieval) end,
-			   [],
-			   false)
+			   fun (E, B) -> expr(E, B, Ieval) end)
     catch
 	Class:Reason ->
 	    exception(Class, Reason, Bs0, Ieval)
@@ -1070,6 +1116,8 @@ expr({lc,_Line,E,Qs}, Bs, Ieval) ->
     eval_lc(E, Qs, Bs, Ieval);
 expr({bc,_Line,E,Qs}, Bs, Ieval) ->
     eval_bc(E, Qs, Bs, Ieval);
+expr({mc,_Line,E,Qs}, Bs, Ieval) ->
+    eval_mc(E, Qs, Bs, Ieval);
 
 %% Brutal exit on unknown expressions/clauses/values/etc.
 expr(E, _Bs, _Ieval) ->
@@ -1090,16 +1138,9 @@ eval_named_fun(As, RF, {Info,Bs,Cs,FName}) ->
 eval_lc(E, Qs, Bs, Ieval) ->
     {value,eval_lc1(E, Qs, Bs, Ieval),Bs}.
 
-eval_lc1(E, [{generate,Line,P,L0}|Qs], Bs0, Ieval0) ->
-    Ieval = Ieval0#ieval{line=Line},
-    {value,L1,Bs1} = expr(L0, Bs0, Ieval#ieval{top=false}),
+eval_lc1(E, [{generator,G}|Qs], Bs, Ieval) ->
     CompFun = fun(NewBs) -> eval_lc1(E, Qs, NewBs, Ieval) end,
-    eval_generate(L1, P, Bs1, CompFun, Ieval);
-eval_lc1(E, [{b_generate,Line,P,L0}|Qs], Bs0, Ieval0) ->
-    Ieval = Ieval0#ieval{line=Line},
-    {value,Bin,_} = expr(L0, Bs0, Ieval#ieval{top=false}),
-    CompFun = fun(NewBs) -> eval_lc1(E, Qs, NewBs, Ieval) end,
-    eval_b_generate(Bin, P, Bs0, CompFun, Ieval);
+    eval_generator(G, Bs, CompFun, Ieval);
 eval_lc1(E, [{guard,Q}|Qs], Bs0, Ieval) ->
     case guard(Q, Bs0) of
 	true -> eval_lc1(E, Qs, Bs0, Ieval);
@@ -1123,16 +1164,9 @@ eval_bc(E, Qs, Bs, Ieval) ->
     Val = erlang:list_to_bitstring(eval_bc1(E, Qs, Bs, Ieval)),
     {value,Val,Bs}.
 
-eval_bc1(E, [{generate,Line,P,L0}|Qs], Bs0, Ieval0) ->
-    Ieval = Ieval0#ieval{line=Line},
-    {value,L1,Bs1} = expr(L0, Bs0, Ieval#ieval{top=false}),
+eval_bc1(E, [{generator,G}|Qs], Bs, Ieval) ->
     CompFun = fun(NewBs) -> eval_bc1(E, Qs, NewBs, Ieval) end,
-    eval_generate(L1, P, Bs1, CompFun, Ieval);
-eval_bc1(E, [{b_generate,Line,P,L0}|Qs], Bs0, Ieval0) ->
-    Ieval = Ieval0#ieval{line=Line},
-    {value,Bin,_} = expr(L0, Bs0, Ieval#ieval{top=false}),
-    CompFun = fun(NewBs) -> eval_bc1(E, Qs, NewBs, Ieval) end,
-    eval_b_generate(Bin, P, Bs0, CompFun, Ieval);
+    eval_generator(G, Bs, CompFun, Ieval);
 eval_bc1(E, [{guard,Q}|Qs], Bs0, Ieval) ->
     case guard(Q, Bs0) of
 	true -> eval_bc1(E, Qs, Bs0, Ieval);
@@ -1147,6 +1181,56 @@ eval_bc1(E, [Q|Qs], Bs0, Ieval) ->
 eval_bc1(E, [], Bs, Ieval) ->
     {value,V,_} = expr(E, Bs, Ieval#ieval{top=false}),
     [V].
+
+eval_mc(E, Qs, Bs, Ieval) ->
+    Map = eval_mc1(E, Qs, Bs, Ieval),
+    {value,maps:from_list(Map),Bs}.
+
+eval_mc1(E, [{generator,G}|Qs], Bs, Ieval) ->
+    CompFun = fun(NewBs) -> eval_mc1(E, Qs, NewBs, Ieval) end,
+    eval_generator(G, Bs, CompFun, Ieval);
+eval_mc1(E, [{guard,Q}|Qs], Bs0, Ieval) ->
+    case guard(Q, Bs0) of
+	true -> eval_mc1(E, Qs, Bs0, Ieval);
+	false -> []
+    end;
+eval_mc1(E, [Q|Qs], Bs0, Ieval) ->
+    case expr(Q, Bs0, Ieval#ieval{top=false}) of
+	{value,true,Bs} -> eval_mc1(E, Qs, Bs, Ieval);
+	{value,false,_Bs} -> [];
+	{value,V,Bs} -> exception(error, {bad_filter,V}, Bs, Ieval)
+    end;
+eval_mc1({map_field_assoc,_,K0,V0}, [], Bs, Ieval) ->
+    {value,K,_} = expr(K0, Bs, Ieval#ieval{top=false}),
+    {value,V,_} = expr(V0, Bs, Ieval#ieval{top=false}),
+    [{K,V}].
+
+eval_generator({generate,Line,P,L0}, Bs0, CompFun, Ieval0) ->
+    Ieval = Ieval0#ieval{line=Line},
+    {value,L1,Bs1} = expr(L0, Bs0, Ieval#ieval{top=false}),
+    eval_generate(L1, P, Bs1, CompFun, Ieval);
+eval_generator({b_generate,Line,P,Bin0}, Bs0, CompFun, Ieval0) ->
+    Ieval = Ieval0#ieval{line=Line},
+    {value,Bin,Bs1} = expr(Bin0, Bs0, Ieval#ieval{top=false}),
+    eval_b_generate(Bin, P, Bs1, CompFun, Ieval);
+eval_generator({m_generate,Line,P,Map0}, Bs0, CompFun, Ieval0) ->
+    Ieval = Ieval0#ieval{line=Line},
+    {map_field_exact,_,K,V} = P,
+    {value,Map,_Bs1} = expr(Map0, Bs0, Ieval),
+    Iter = case is_map(Map) of
+               true ->
+                   maps:iterator(Map);
+               false ->
+                   %% Validate iterator.
+                   try maps:foreach(fun(_, _) -> ok end, Map) of
+                       _ ->
+                           Map
+                   catch
+                       _:_ ->
+                           exception(error, {bad_generator,Map}, Bs0, Ieval)
+                   end
+           end,
+    eval_m_generate(Iter, {tuple,Line,[K,V]}, Bs0, CompFun, Ieval).
 
 eval_generate([V|Rest], P, Bs0, CompFun, Ieval) ->
     case catch match1(P, V, erl_eval:new_bindings(), Bs0) of
@@ -1175,6 +1259,20 @@ eval_b_generate(<<_/bitstring>>=Bin, P, Bs0, CompFun, Ieval) ->
     end;
 eval_b_generate(Term, _P, Bs, _CompFun, Ieval) ->
     exception(error, {bad_generator,Term}, Bs, Ieval).
+
+eval_m_generate(Iter0, P, Bs0, CompFun, Ieval) ->
+    case maps:next(Iter0) of
+        {K,V,Iter} ->
+            case catch match1(P, {K,V}, erl_eval:new_bindings(), Bs0) of
+                {match,Bsn} ->
+                    Bs2 = add_bindings(Bsn, Bs0),
+                    CompFun(Bs2) ++ eval_m_generate(Iter, P, Bs0, CompFun, Ieval);
+                nomatch ->
+                    eval_m_generate(Iter, P, Bs0, CompFun, Ieval)
+            end;
+        none ->
+            []
+    end.
 
 safe_bif(M, F, As, Bs, Ieval0) ->
     try apply(M, F, As) of
@@ -1479,6 +1577,9 @@ guard_expr({'orelse',_,E1,E2}, Bs) ->
 		{value,_Val}=Res -> Res
 	    end
     end;
+guard_expr({'case',_,E0,Cs}, Bs) ->
+    {value,E} = guard_expr(E0, Bs),
+    guard_case_clauses(E, Cs, Bs);
 guard_expr({dbg,_,self,[]}, _) ->
     {value,get(self)};
 guard_expr({safe_bif,_,erlang,'not',As0}, Bs) ->
@@ -1518,9 +1619,23 @@ guard_expr({bin,_,Flds}, Bs) ->
 			   fun(E,B) ->
 				   {value,V} = guard_expr(E,B),
 				   {value,V,B}
-			   end, [], false),
+			   end),
     {value,V}.
 
+%% guard_case_clauses(Value, Clauses, Bindings, Error, Ieval)
+%%   Error = try_clause | case_clause
+guard_case_clauses(Val, [{clause,_,[P],G,B}|Cs], Bs0) ->
+    case match(P, Val, Bs0) of
+	{match,Bs} ->
+	    case guard(G, Bs) of
+		true ->
+		    guard_expr(hd(B), Bs);
+		false ->
+		    guard_case_clauses(Val, Cs, Bs0)
+	    end;
+	nomatch ->
+	    guard_case_clauses(Val, Cs, Bs0)
+    end.
 
 %% eval_map_fields([Field], Bindings, IEvalState) ->
 %%  {[{map_assoc | map_exact,Key,Value}],Bindings}
@@ -1597,8 +1712,7 @@ match1({map,_,Fields}, Map, Bs, BBs) when is_map(Map) ->
 match1({bin,_,Fs}, B, Bs0, BBs) when is_bitstring(B) ->
     try eval_bits:match_bits(Fs, B, Bs0, BBs,
 			     match_fun(BBs),
-			     fun(E, Bs) -> expr(E, Bs, #ieval{}) end,
-			     false)
+			     fun(E, Bs) -> expr(E, Bs, #ieval{}) end)
     catch
 	_:_ -> throw(nomatch)
     end;

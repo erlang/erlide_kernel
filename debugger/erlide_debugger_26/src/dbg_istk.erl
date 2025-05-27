@@ -1,7 +1,7 @@
 %%
 %% %CopyrightBegin%
 %%
-%% Copyright Ericsson AB 2011-2016. All Rights Reserved.
+%% Copyright Ericsson AB 2011-2021. All Rights Reserved.
 %%
 %% Licensed under the Apache License, Version 2.0 (the "License");
 %% you may not use this file except in compliance with the License.
@@ -24,7 +24,9 @@
 	 bindings/1,stack_frame/2,backtrace/2,
 	 in_use_p/2]).
 
+%% erlide patch ------------------------------------------------------
 -export([all_frames/0, all_frames/1, all_modules_on_stack/0]).
+%% erlide patch ------------------------------------------------------
 
 -include("dbg_ieval.hrl").
 
@@ -34,6 +36,7 @@
 	{level,					%Level
 	 mfa,					%{Mod,Func,Args|Arity}|{Fun,Args}
 	 line,					%Line called from
+         error_info=[],                         %[{error_info,Map}] | []
 	 bindings,
 	 lc					%Last call (true|false)
 	 }).
@@ -51,6 +54,7 @@ from_external({stack,Stk}) ->
 init(Stack) ->
     put(?STACK, Stack).
 
+%% erlide patch ------------------------------------------------------
 all_frames() ->
     all_frames(get(?STACK)).
 
@@ -72,6 +76,7 @@ all_modules_on_stack(Stack) ->
 
 args2arity(As) when is_list(As) ->
     length(As).
+%% erlide patch ------------------------------------------------------
 
 %% We keep track of a call stack that is used for
 %%  1) saving stack frames that can be inspected from an Attached
@@ -149,8 +154,9 @@ delayed_stacktrace() ->
     end.
 
 delayed_stacktrace(include_args, Ieval) ->
-    #ieval{module=Mod,function=Name,arguments=As,line=Li} = Ieval,
-    Stack0 = [#e{mfa={Mod,Name,As},line=Li}|get(?STACK)],
+    #ieval{module=Mod,function=Name,arguments=As,
+           line=Li,error_info=ErrorInfo} = Ieval,
+    Stack0 = [#e{mfa={Mod,Name,As},line=Li,error_info=ErrorInfo}|get(?STACK)],
     fun(NumEntries) ->
 	    case stacktrace(NumEntries, Stack0, []) of
 		[] ->
@@ -182,18 +188,22 @@ stacktrace(N, [E|T], [{P,_}|_]=Acc) when N > 0 ->
 stacktrace(_, _, Acc) ->
     lists:reverse(Acc).
 
-normalize(#e{mfa={M,Fun,As},line=Li}) when is_function(Fun) ->
-    Loc = {M,Li},
+normalize(#e{mfa={M,Fun,As},line=Li,error_info=ErrorInfo}) when is_function(Fun) ->
+    Loc = {M,Li,ErrorInfo},
     {{Fun,length(As),Loc},{Fun,As,Loc}};
-normalize(#e{mfa={M,F,As},line=Li}) ->
-    Loc = {M,Li},
+normalize(#e{mfa={M,F,As},line=Li,error_info=ErrorInfo}) ->
+    Loc = {M,Li,ErrorInfo},
     {{M,F,length(As),Loc},{M,F,As,Loc}}.
 
 finalize({M,F,A,Loc}) -> {M,F,A,line(Loc)};
 finalize({Fun,A,Loc}) -> {Fun,A,line(Loc)}.
 
-line({Mod,Line}) when Line > 0 ->
-    [{file,atom_to_list(Mod)++".erl"},{line,Line}];
+line({Mod,Line,ErrorInfo}) ->
+    if Line > 0 ->
+            [{file,atom_to_list(Mod)++".erl"},{line,Line}|ErrorInfo];
+       true ->
+            ErrorInfo
+    end;
 line(_) -> [].
 
 %% bindings(SP) -> Bs
