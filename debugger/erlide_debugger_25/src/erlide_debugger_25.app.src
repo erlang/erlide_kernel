@@ -1,7 +1,7 @@
 {application, erlide_debugger_25,
   [
     {description,    "erlide_debugger_25"},
-    {vsn,            "5.3"},
+    {vsn,            "0.118.0"},
     {erlide_context, debugger},
     {registered,     []},
     {applications,   [kernel, stdlib]},

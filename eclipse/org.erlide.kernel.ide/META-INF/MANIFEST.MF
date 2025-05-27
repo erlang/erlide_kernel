@@ -2,7 +2,7 @@ Manifest-Version: 1.0
 Bundle-ManifestVersion: 2
 Bundle-Name: Erlide Kernel
 Bundle-SymbolicName: org.erlide.kernel.ide;singleton:=true
-Bundle-Version: 0.117.0.qualifier
+Bundle-Version: 0.118.0.qualifier
 Bundle-Vendor: erlide.org project
 Bundle-RequiredExecutionEnvironment: JavaSE-1.6
 Eclipse-BundleShape: dir
