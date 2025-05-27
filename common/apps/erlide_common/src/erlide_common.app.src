@@ -1,7 +1,7 @@
 {application, erlide_common,
   [
    {description,"erlide_common"},
-   {vsn, "0.117.0"},
+   {vsn, "0.118.0"},
    {erlide_context, common},
    {registered,   []},
    {applications, [kernel, stdlib]},
