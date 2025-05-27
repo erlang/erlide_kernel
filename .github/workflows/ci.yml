@@ -7,14 +7,6 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
     - uses: actions/checkout@v4
-    - name: Install OpenSSL 1.1.1 (for OTP23/24)
-      run: |
-          curl -O http://security.ubuntu.com/ubuntu/pool/main/o/openssl/libssl1.1_1.1.1f-1ubuntu2.24_amd64.deb
-          curl -O http://security.ubuntu.com/ubuntu/pool/main/o/openssl/libssl-dev_1.1.1f-1ubuntu2.24_amd64.deb
-          curl -O http://security.ubuntu.com/ubuntu/pool/main/o/openssl/openssl_1.1.1f-1ubuntu2.24_amd64.deb
-          sudo dpkg -i openssl_1.1.1f-1ubuntu2.24_amd64.deb \
-                       libssl1.1_1.1.1f-1ubuntu2.24_amd64.deb \
-                       libssl-dev_1.1.1f-1ubuntu2.24_amd64.deb
     - uses: actions/cache@v4
       with:
         path: |
