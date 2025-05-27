@@ -4,18 +4,25 @@ on: [push, pull_request]
 
 jobs:
   build:
-    runs-on: ubuntu-20.04
-
+    runs-on: ubuntu-24.04
     steps:
-    - uses: actions/checkout@v3
-    - uses: actions/cache@v3
+    - uses: actions/checkout@v4
+    - name: Install OpenSSL 1.1.1 (for OTP23/24)
+      run: |
+          curl -O http://security.ubuntu.com/ubuntu/pool/main/o/openssl/libssl1.1_1.1.1f-1ubuntu2.24_amd64.deb
+          curl -O http://security.ubuntu.com/ubuntu/pool/main/o/openssl/libssl-dev_1.1.1f-1ubuntu2.24_amd64.deb
+          curl -O http://security.ubuntu.com/ubuntu/pool/main/o/openssl/openssl_1.1.1f-1ubuntu2.24_amd64.deb
+          sudo dpkg -i openssl_1.1.1f-1ubuntu2.24_amd64.deb \
+                       libssl1.1_1.1.1f-1ubuntu2.24_amd64.deb \
+                       libssl-dev_1.1.1f-1ubuntu2.24_amd64.deb
+    - uses: actions/cache@v4
       with:
         path: |
           ~/erlide_tools
           ~/.kerl
         key: ${{ runner.os }}-otp-${{ hashFiles('build_utils.sh') }}
     - name: Set up JDK 1.8
-      uses: actions/setup-java@v3
+      uses: actions/setup-java@v4
       with:
         java-version: '8'
         distribution: 'zulu'
